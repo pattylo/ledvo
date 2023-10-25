@@ -1,8 +1,8 @@
-# ABED ("A" heterogeneous control-framework "B"ased on relative pose "E"stimation using "D"ynamic model and vision)
+# LEDVO ("LE"arning "D"ynamic Factors for Optimization-based "V"isual "O"dometry)
 
 ## UNDER CONSTRUCTION!
 
-## Geometric Relative Pose Estimation for Aerial Vehicles during Offboard Sensing and Control Scenarios
+## Learning Dynamic Factors for for Optimization-based Visual Odometry
 
 ### Abstract
 <div align="justify">

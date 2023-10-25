@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(alan_ugv)
+project(visual_odometry)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -20,8 +20,10 @@ find_package(catkin COMPONENTS
   message_generation
   genmsg
   visualization_msgs
+  tf
 )
 
+find_package(OpenCV 4 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Sophus REQUIRED)
 
@@ -30,7 +32,7 @@ roslaunch_add_file_check(launch)
 
 add_message_files(
   FILES
-  alan_ugv_blank.msg
+  alan_log.msg
 )
 
 
@@ -38,6 +40,7 @@ generate_messages(DEPENDENCIES std_msgs sensor_msgs)
 
 catkin_package(
   #  INCLUDE_DIRS include
+  #  LIBRARIES offb
   CATKIN_DEPENDS 
   geometry_msgs 
   mavros_msgs 
@@ -48,27 +51,30 @@ catkin_package(
 
 set(Sophus_LIBRARIES libSophus.so)
 
-
 include_directories(
-# include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
   ${Sophus_INCLUDE_DIRS}
 )
 
-add_executable(virtual_car
-  src/virtual_car.cpp
-  src/RosTopicConfigs.cpp
-)
+add_library(alan
+  src/led.cpp
+  )
 
-target_link_libraries(virtual_car
+## Specify libraries to link a library or executable target against
+target_link_libraries(
+  alan
   ${catkin_LIBRARIES}
+  ${OpenCV_INCLUDE_DIRS}
+  ${Sophus_INCLUDE_DIRS}
+)
+add_dependencies(
+  alan 
+  visual_odometry_generate_messages_cpp
 )
 
-add_executable(physique_car
-  src/physique_car.cpp
-  src/RosTopicConfigs.cpp
-)
 
-target_link_libraries(physique_car
-  ${catkin_LIBRARIES}
-)
+
+
+
+
