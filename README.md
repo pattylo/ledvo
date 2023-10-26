@@ -2,7 +2,7 @@
 
 ## UNDER CONSTRUCTION!
 
-## Learning Dynamic Factors for for Optimization-based Visual Odometry
+## Learning Dynamic Factors for Optimization-based Visual Odometry
 
 ### Abstract
 <div align="justify">

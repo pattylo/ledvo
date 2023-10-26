@@ -1,0 +1,1 @@
+rosrun mavros mavsys rate --rc-channels 100
