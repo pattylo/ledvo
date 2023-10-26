@@ -1,0 +1,9 @@
+# whether the path/traj is predefined
+predefined: true
+
+# trajtype
+TrajType: CIRCLE_TRAJ # CIRCLE_TRAJ, BLOCK_TRAJ, LEMNISCATE_TRAJ
+
+########## PREDEFINED ##########
+# center
+pub_freq: 0
