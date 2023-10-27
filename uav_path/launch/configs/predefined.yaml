@@ -15,12 +15,12 @@ lap_no: 2
 ccw: true
 
 # z move or not
-z_moving: false
+z_moving: true
 z_moving_amp: 0.4
 z_moving_perioud: 7.5
 
 # circle
-circle_velo: 12.0 # dg/s
+circle_velo: 24.0 # dg/s
 circle_radius: 2.0
 
 # block
@@ -31,7 +31,7 @@ block_T_angle: 0.0
 
 # lemniscate
 amp: 2
-lemi_velo: 12.0 # dg/s
+lemi_velo: 48.0 # dg/s
 timePerLap: 2.0
 
 

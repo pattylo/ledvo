@@ -83,7 +83,6 @@ void planner_server::config(ros::NodeHandle& _nh)
 
     bool z_moving;
     _nh.getParam("z_moving", z_moving);
-    std::cout<<z_moving<<std::endl;
     double z_moving_amp;
     _nh.getParam("z_moving_amp", z_moving_amp);
     double z_moving_period;
@@ -170,14 +169,14 @@ void planner_server::mainspinCallback(const ros::TimerEvent &e)
             case TAKEOFF:{
                 
                 if(fsm_info.is_landed == true){
-                    ROS_GREEN_STREAM("TAKE OFF!");
+                    ROS_CYAN_STREAM("TAKE OFF!");
                     takeoff_land_trigger.takeoff_land_trigger = true; // Takeoff
                     takeoff_land_trigger.header.stamp = ros::Time::now();
                     takeoff_land_pub.publish(takeoff_land_trigger);
                 }
                 if(fsm_info.is_waiting_for_command){
                     state = COMMAND;
-                    ROS_GREEN_STREAM("TAKEOFF ==>> COMMAND!");
+                    ROS_CYAN_STREAM("TAKEOFF ==>> COMMAND!");
                     last_request = ros::Time::now().toSec();
                 }
                 break;
@@ -199,7 +198,7 @@ void planner_server::mainspinCallback(const ros::TimerEvent &e)
                     if(traj_i == TRAJECTORY.size() - 1)
                     {
                         state = LAND;
-                        ROS_GREEN_STREAM("COMMAND ==>> LAND!");
+                        ROS_CYAN_STREAM("COMMAND ==>> LAND!");
                     }
                         
                 }
@@ -236,11 +235,7 @@ void planner_server::exec_predefined_traj()
 
 bool planner_server::check_start_point()
 {
-    // if(ros::Time::now().toSec() - last_request > ros::Duratio)
-    std::cout<<sqrt(
-            abs(uav_pose.pose.position.x - TRAJECTORY[0].x)
-            + abs(uav_pose.pose.position.y - TRAJECTORY[0].y)
-            + abs(uav_pose.pose.position.z - TRAJECTORY[0].z))<<std::endl;
+    
     if(
         sqrt(
             abs(uav_pose.pose.position.x - TRAJECTORY[0].x)
@@ -248,7 +243,11 @@ bool planner_server::check_start_point()
             + abs(uav_pose.pose.position.z - TRAJECTORY[0].z)
         ) < starting_error
     )
+    {
+        ROS_GREEN_STREAM("START TRAJ!");
         return true;
+    }
+        
     else
         return false;
 }
