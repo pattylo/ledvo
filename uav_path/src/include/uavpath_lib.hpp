@@ -336,8 +336,8 @@ void uav::uavpath::set_traj()
 
             for(int j = 0; j < traj_total_no_per_lap; j++)
             {
-                traj_pt_temp.x = lemi_traj_info.center.x() + lemi_traj_info.amp * cos(j / double(traj_total_no_per_lap) * 2.0 * M_PI);
-                traj_pt_temp.y = lemi_traj_info.center.y() + lemi_traj_info.amp * cos(j / double(traj_total_no_per_lap) * 2.0 * M_PI) * sin(j / double(traj_total_no_per_lap) * 2.0 * M_PI);
+                traj_pt_temp.x = lemi_traj_info.center.x() + lemi_traj_info.amp * cos(j / double(traj_total_no_per_lap) * 2.0 * M_PI) * sin(j / double(traj_total_no_per_lap) * 2.0 * M_PI);
+                traj_pt_temp.y = lemi_traj_info.center.y() + lemi_traj_info.amp * cos(j / double(traj_total_no_per_lap) * 2.0 * M_PI);
                 
                 if(!lemi_traj_info.z_moving)
                     traj_pt_temp.z = lemi_traj_info.center.z();
