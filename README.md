@@ -19,6 +19,10 @@ This research addresses the relative pose estimation problem of aerial vehicles;
 # install Ubuntu 18.04 || 20.04
 # install ROS
 # install OpenCV (should come along with ROS)
+
+sudo apt-get install ros-noetic-sophus
+sudo ln -s /usr/include/eigen3/Eigen /usr/include/Eigen #if neccessary
+
 ```
 
 This repo utilize some third-party libraries,
