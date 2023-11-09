@@ -1,0 +1,17 @@
+<launch>
+    <!-- VIO through flvis -->
+    <!-- <include file="$(find flvis)/launch/flvis_d455_depth.launch"/> -->
+
+
+    <!-- ROS Nodelet manager -->
+    <node pkg="nodelet" type="nodelet" name="alan_master" args="manager" output="screen">
+            <rosparam command="load" file="$(find alan_state_estimation)/launch/configs/alan_pose_estimation.yaml" />
+    </node> 
+
+    <!-- LedNodelet -->
+    <node pkg="nodelet" type="nodelet" name="led" args="load alan/LedNodelet alan_master" output="screen">
+        <rosparam command="load" file="$(find alan_state_estimation)/launch/configs/LED_SUBPUB_topics.yaml" />
+    </node> 
+
+</launch>
+

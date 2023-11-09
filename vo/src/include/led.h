@@ -51,6 +51,14 @@
 #include <pthread.h>
 #include <tf/tf.h>
 
+#include <gtsam/geometry/Point2.h>
+#include <gtsam/inference/Symbol.h>
+#include <gtsam/nonlinear/NonlinearFactorGraph.h>
+#include <gtsam/nonlinear/Values.h>
+#include <gtsam/slam/PriorFactor.h>
+#include <gtsam/slam/ProjectionFactor.h>
+#include <gtsam/nonlinear/FixedLagSmoother.h>
+#include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
 
 #include "tools/RosTopicConfigs.h"
 #include "visual_odometry/alan_log.h"
@@ -84,6 +92,14 @@ namespace correspondence
 
 namespace alan
 {
+    typedef struct landmark
+    {
+        bool tracking = false;
+        int tracked_no = 0;
+        gtsam::Point3 pt3d;
+        gtsam::Point2 pt2d_previous;
+    }landmark;
+
     class LedNodelet : public nodelet::Nodelet, private kf::aiekf
     {
         //primary objects
@@ -162,11 +178,16 @@ namespace alan
             image_transport::Publisher pubimage_input;
             //functions
         
-        
-        //main process & kf
+        // ledvo
             void solve_pose_w_LED(cv::Mat& frame, cv::Mat depth);
+            bool initialization(cv::Mat& frame, cv::Mat depth);
+            void recursive_filtering(cv::Mat& frame, cv::Mat depth);   
+
+
+        //main process & kf
+            
             void apiKF(int DOKF);
-            void recursive_filtering(cv::Mat& frame, cv::Mat depth);                
+                         
         
         //LED extraction tool
             //objects
@@ -175,10 +196,21 @@ namespace alan
 
             std::vector<Eigen::Vector3d> pts_on_body_frame_in_corres_order;
             std::vector<Eigen::Vector2d> pts_detected_in_corres_order;
+
+            std::vector<landmark> registered_landmarks;
+
+            void process_landmarks(
+                std::vector<gtsam::Point2> pts_2d_detect,
+                std::vector<gtsam::Point3> pts_3d_detect,
+                bool initialing
+            );
             
             std::vector<Eigen::Vector2d> LED_extract_POI(cv::Mat& frame, cv::Mat depth);
-            std::vector<Eigen::Vector2d> LED_extract_POI_alter(cv::Mat& frame, cv::Mat depth);
-            std::vector<Eigen::Vector3d> pointcloud_generate(std::vector<Eigen::Vector2d> pts_2d_detected, cv::Mat depthimage);
+            std::vector<Eigen::Vector2d> LED_extract_POI_alter(cv::Mat& frame);
+            std::vector<gtsam::Point3> pointcloud_generate(
+                std::vector<gtsam::Point2> pts_2d_detected, 
+                cv::Mat depthimage
+            );
 
         // correspondence search
             //objects
@@ -212,7 +244,7 @@ namespace alan
             double MAD_x_threshold = 0, MAD_y_threshold = 0, MAD_z_threshold = 0;
             double min_blob_size = 0;
             //functions
-            bool initialization(cv::Mat& frame, cv::Mat depth);
+            
             void solve_pnp_initial_pose(
                 std::vector<Eigen::Vector2d> pts_2d, 
                 std::vector<Eigen::Vector3d> body_frame_pts
@@ -275,6 +307,7 @@ namespace alan
                 ros::NodeHandle& nh = getMTNodeHandle();
                 ROS_INFO("LED Nodelet Initiated...");
 
+                
                 RosTopicConfigs configs(nh, "/led");
 
                 doALOTofConfigs(nh);
@@ -331,6 +364,7 @@ namespace alan
 
             inline void doALOTofConfigs(ros::NodeHandle& nh)
             {
+                std::cout<<"configs here"<<std::endl;
                 POI_config(nh);
                 camIntrinsic_config(nh);
                 camExtrinsic_config(nh);
