@@ -89,41 +89,47 @@ void alan::LedNodelet::camera_callback(
     //     nodelet_activated = true;
 
     // led_pose_header_previous = led_pose_header;
+    k++;
 
 } 
 
 void alan::LedNodelet::solve_pose_w_LED(cv::Mat& frame, cv::Mat depth)
 {   
+    
     if(!LED_tracker_initiated_or_tracked)
         initialization(frame, depth);
     else
         recursive_filtering(frame, depth);
 }
 
-bool alan::LedNodelet::initialization(cv::Mat& frame, cv::Mat depth)
+void alan::LedNodelet::initialization(cv::Mat& frame, cv::Mat depth)
 {
     std::vector<gtsam::Point2> pts_2d_detect = LED_extract_POI_alter(frame);
 
     if(pts_2d_detect.size() < 4)
-        return false;
-
+    {
+        std::cout<<"LESS THAN 4"<<std::endl;
+        return;
+    }
+    
     std::vector<gtsam::Point3> pts_3d_detect = pointcloud_generate(pts_2d_detect, depth);
 
-    process_landmarks(pts_2d_detect, pts_3d_detect, true);
-
-    return true;
+    if(process_landmarks(pts_2d_detect, pts_3d_detect, true))
+        LED_tracker_initiated_or_tracked = true;
+    
+    return;
 }
 
 void alan::LedNodelet::recursive_filtering(cv::Mat& frame, cv::Mat depth)
 {
-    std::vector<Eigen::Vector2d> pts_2d_detect;
+    std::vector<gtsam::Point2> pts_2d_detect;
     std::cout<<"gan"<<std::endl;
     pts_2d_detect = LED_extract_POI_alter(frame);
 }
 
-std::vector<Eigen::Vector2d> alan::LedNodelet::LED_extract_POI_alter(cv::Mat& frame)
+std::vector<gtsam::Point2> alan::LedNodelet::LED_extract_POI_alter(cv::Mat& frame)
 {   
-    std::vector<Eigen::Vector2d> pts_2d_detected;
+    std::vector<gtsam::Point2> pts_2d_detected;
 
     // convert to gray
     cv::cvtColor(frame, frame, cv::COLOR_BGR2GRAY);
@@ -148,25 +154,33 @@ std::vector<Eigen::Vector2d> alan::LedNodelet::LED_extract_POI_alter(cv::Mat& fr
 
 	cv::drawKeypoints(frame, keypoints_rgb_d, im_with_keypoints,CV_RGB(255,0,0), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
     
+    
     // std::cout<<im_with_keypoints.type()<<std::endl;
-    // cv::cvtColor(im_with_keypoints, im_with_keypoints, cv::COLOR_GRAY2RGB);
-    std::cout<<"here"<<std::endl;
-    // std::cout<<im_with_keypoints.type()<<std::endl;
-    cv::imshow("test", im_with_keypoints);
-    cv::waitKey(4);
-    //////////////////////////////////////////////////////////////////////////////////////////
-    Eigen::Vector2d lala;
-    pts_2d_detected.emplace_back(lala);
+    // cv::imshow("test", im_with_keypoints);
+    // cv::waitKey(4);
+
+    gtsam::Point2 temp;
+    for(auto& what : keypoints_rgb_d)
+    {
+        temp.x() = what.pt.x;
+        temp.y() = what.pt.y;
+
+        pts_2d_detected.emplace_back(temp);
+    }
 
     return pts_2d_detected;
 }
 
 
 std::vector<gtsam::Point3> alan::LedNodelet::pointcloud_generate(
-    std::vector<gtsam::Point2> pts_2d_detected, 
+    std::vector<gtsam::Point2>& pts_2d_detected, 
     cv::Mat depthimage
 )
 {
+    std::vector<gtsam::Point2> pts_2d_detected_temp = pts_2d_detected;
+
+    pts_2d_detected.clear();
+
     //get 9 pixels around the point of interest
     int no_pixels = 9;
     int POI_width = (sqrt(9) - 1 ) / 2;
@@ -179,7 +193,7 @@ std::vector<gtsam::Point3> alan::LedNodelet::pointcloud_generate(
     depth_avg_of_all = 0;
     
 
-    for(int i = 0; i < pts_2d_detected.size(); i++)
+    for(int i = 0; i < pts_2d_detected_temp.size(); i++)
     {
 
         x_pixel = pts_2d_detected[i].x();
@@ -188,6 +202,22 @@ std::vector<gtsam::Point3> alan::LedNodelet::pointcloud_generate(
         cv::Point depthbox_vertice1 = cv::Point(x_pixel - POI_width, y_pixel - POI_width);
         cv::Point depthbox_vertice2 = cv::Point(x_pixel + POI_width, y_pixel + POI_width);
         cv::Rect letsgetdepth(depthbox_vertice1, depthbox_vertice2);
+
+        if(
+            depthbox_vertice1.x < 1 || 
+            depthbox_vertice1.y < 1 ||
+            depthbox_vertice1.x > depthimage.cols ||
+            depthbox_vertice1.y > depthimage.rows ||
+
+            depthbox_vertice2.x < 1 ||
+            depthbox_vertice2.y < 1 ||
+            depthbox_vertice2.x > depthimage.cols ||
+            depthbox_vertice2.y > depthimage.rows 
+        )
+        {
+            continue;
+        }
+            
 
         cv::Mat ROI(depthimage, letsgetdepth);
         cv::Mat ROIframe;
@@ -202,24 +232,133 @@ std::vector<gtsam::Point3> alan::LedNodelet::pointcloud_generate(
             nonzerosvalue.push_back(depth);
         }
 
-        double depth_average;
+        double depth_average = 0;
         if(nonzerosvalue.size() != 0)
             depth_average = accumulate(nonzerosvalue.begin(), nonzerosvalue.end(),0.0)/nonzerosvalue.size();
-
         double z_depth = 0.001 * depth_average;
 
-        depth_avg_of_all = depth_avg_of_all + z_depth;
+        z_depth = depthimage.at<ushort>(cv::Point(x_pixel, y_pixel)) * 0.001;
+        
+
+        if(z_depth == 0 || z_depth > 8.0)
+            continue;
+
+        
 
         temp.x() = x_pixel;
         temp.y() = y_pixel;
         temp.z() = 1;
 
+
         temp = z_depth * cameraMat.inverse() * temp;
         
-        pointclouds.push_back(temp);
+        pts_2d_detected.emplace_back(pts_2d_detected_temp[i]);
+        pointclouds.emplace_back(temp);
+        
     }
 
+
     return pointclouds;
+}
+
+bool alan::LedNodelet::process_landmarks(
+    std::vector<gtsam::Point2> pts_2d_detect,
+    std::vector<gtsam::Point3> pts_3d_detect,
+    bool initialing
+)
+{
+    if(pts_2d_detect.size() != pts_3d_detect.size())
+        pc::pattyDebug("DETECTION SIZES DO NOT MATCH...");
+
+    if(initialing)
+    {
+        std::cout<<"try to initialize..."<<std::endl;
+        // std::cout
+
+        using namespace gtsam; 
+
+        traj_points.points.clear();
+
+        landmark temp;
+        if(firstFrame)
+        {
+            // no need correspondences search, just initialize
+
+            noiseModel::Isotropic::shared_ptr measurementNoise = noiseModel::Isotropic::Sigma(2, 1.0); // one pixel in u and v
+            std::cout<<"size here: "<<pts_2d_detect.size()<<std::endl;
+
+            for(int i = 0; i < pts_2d_detect.size(); i++)
+            {
+
+                PinholeCamera<Cal3_S2> camera(x_current, *K);
+                Point2 measurement = pts_2d_detect[i];
+
+                newFactors.push_back(
+                    GenericProjectionFactor<Pose3, Point3, Cal3_S2>(
+                        measurement,
+                        measurementNoise,
+                        Symbol('x', k),
+                        Symbol('l', m),
+                        K
+                    )
+                );
+
+                // pose_cam_inGeneralBodySE3.matrix() * Eigen::Vector4d(pts_3d_detect[i],1);
+                Eigen::Vector4d homo_pt_temp;
+                std::cout<<"one pt here"<<std::endl;
+                std::cout<<cameraMat<<std::endl;
+
+                std::cout<<pts_2d_detect[i]<<std::endl;
+                homo_pt_temp << pts_3d_detect[i], 1; 
+                std::cout<<homo_pt_temp<<std::endl;
+                std::cout<<pose_cam_inGeneralBodySE3.matrix()<<std::endl;
+                geometry_msgs::Point posi_temp;
+                
+                std::cout<<pose_uav_inWorld_SE3.matrix()<<std::endl;
+                homo_pt_temp =  pose_uav_inWorld_SE3.matrix() * pose_cam_inGeneralBodySE3.matrix() * homo_pt_temp;
+                
+                posi_temp.x = homo_pt_temp(0);
+                posi_temp.y = homo_pt_temp(1);
+                posi_temp.z = homo_pt_temp(2);
+                traj_points.points.push_back(posi_temp);
+
+
+
+                // if(!landmarkValues.exists(Symbol('l',m)))
+                // {
+                //     landmarkValues.insert<Point3>(
+                //         Symbol('l', m),
+                //         points[j] + Point3(-0.25, 0.20, 0.15)
+                //     );
+
+                //     newValues.insert<Point3>(
+                //         Symbol('l', m),
+                //         points[j] + Point3(-0.25, 0.20, 0.15)
+                //     );
+                // }
+
+                m++;
+            }
+
+            // firstFrame = false;
+
+            // pc::pattyDebug("TEST INITIALIZATION!");
+        }
+        else
+        {
+            // require correspondences search
+        }
+    }
+    else
+    {
+        
+
+    }
+
+    traj_points.header.stamp = ros::Time::now();
+    lm_pub.publish(traj_points);
+
+
 }
 
 
@@ -232,9 +371,7 @@ std::vector<gtsam::Point3> alan::LedNodelet::pointcloud_generate(
 
 
 
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -243,15 +380,15 @@ Sophus::SE3d alan::LedNodelet::posemsg_to_SE3(const geometry_msgs::PoseStamped p
 {
     return Sophus::SE3d(
         Eigen::Quaterniond(
-            ugv_pose_msg.pose.orientation.w,
-            ugv_pose_msg.pose.orientation.x,
-            ugv_pose_msg.pose.orientation.y,
-            ugv_pose_msg.pose.orientation.z  
+            pose.pose.orientation.w,
+            pose.pose.orientation.x,
+            pose.pose.orientation.y,
+            pose.pose.orientation.z  
         ).normalized().toRotationMatrix(),
         Eigen::Translation3d(
-            ugv_pose_msg.pose.position.x,
-            ugv_pose_msg.pose.position.y,
-            ugv_pose_msg.pose.position.z
+            pose.pose.position.x,
+            pose.pose.position.y,
+            pose.pose.position.z
         ).translation()
     );
 }
@@ -710,36 +847,7 @@ std::vector<Eigen::Vector2d> alan::LedNodelet::LED_extract_POI(cv::Mat& frame, c
 
 /* ================ Init. utilities function below ================ */
 
-void alan::LedNodelet::process_landmarks(
-    std::vector<gtsam::Point2> pts_2d_detect,
-    std::vector<gtsam::Point3> pts_3d_detect,
-    bool initialing
-)
-{
-    if(pts_2d_detect.size() != pts_3d_detect.size())
-        pc::pattyDebug("DETECTION SIZES DO NOT MATCH...");
 
-    if(initialing)
-    {
-        landmark temp;
-        for(int i = 0; i < pts_2d_detect.size(); i++)
-        {
-            temp.tracking = true;
-            temp.tracked_no++;
-            temp.pt2d_previous = pts_2d_detect[i];
-            temp.pt3d = pts_3d_detect[i];
-
-            registered_landmarks.emplace_back(temp);
-        }
-    }
-    else
-    {
-        
-
-    }
-
-
-}
 
 
 

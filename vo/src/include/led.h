@@ -58,13 +58,18 @@
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam/slam/ProjectionFactor.h>
 #include <gtsam/nonlinear/FixedLagSmoother.h>
-#include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
+#include <gtsam/nonlinear/BatchFixedLagSmoother.h>
+#include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
+
 
 #include "tools/RosTopicConfigs.h"
 #include "visual_odometry/alan_log.h"
 
 #include "aiekf.hpp"
 #include "cameraModel.hpp"
+
+#include <visualization_msgs/Marker.h>
+
 
 // map definition for convinience
 #define COLOR_SUB_TOPIC CAMERA_SUB_TOPIC_A
@@ -174,16 +179,51 @@ namespace alan
             ros::Publisher ledpose_pub, ledodom_pub, 
                            campose_pub, ugvpose_pub, uavpose_pub,
                            record_led_pub, record_uav_pub;
+            ros::Publisher lm_pub;
             image_transport::Publisher pubimage;
             image_transport::Publisher pubimage_input;
             //functions
         
         // ledvo
             void solve_pose_w_LED(cv::Mat& frame, cv::Mat depth);
-            bool initialization(cv::Mat& frame, cv::Mat depth);
+            void initialization(cv::Mat& frame, cv::Mat depth);
             void recursive_filtering(cv::Mat& frame, cv::Mat depth);   
+            std::vector<gtsam::Point2> LED_extract_POI_alter(cv::Mat& frame);
+            std::vector<gtsam::Point3> pointcloud_generate(
+                std::vector<gtsam::Point2>& pts_2d_detected, 
+                cv::Mat depthimage
+            );
+
+            // batch fixedlag smoother
+            gtsam::LevenbergMarquardtParams batchLMparameters;
+            gtsam::NonlinearFactorGraph newFactors;
+            gtsam::Values newValues;
+            gtsam::Values landmarkValues;
+            gtsam::FixedLagSmoother::KeyTimestampMap newTimestamps;
+        
+            double batchLag = 4.0;
+            // gtsam::BatchFixedLagSmoother batchsmoother(batchLag, batchLMparameters);
+            std::unique_ptr<gtsam::BatchFixedLagSmoother> batchsmoother;
+
+            gtsam::Values registeredLandmarks;
+            bool firstFrame = true;
+            int landmarkInitialTrackingCount = 0;
+            gtsam::Pose3 x_current;
+            gtsam::Pose3 x_previous;
+
+            double timeStart;
+            gtsam::Cal3_S2::shared_ptr K;
+
+            int k = 0; // for x
+            int m = 0; // for lm
 
 
+            visualization_msgs::Marker traj_points;
+            
+        
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         //main process & kf
             
             void apiKF(int DOKF);
@@ -197,20 +237,17 @@ namespace alan
             std::vector<Eigen::Vector3d> pts_on_body_frame_in_corres_order;
             std::vector<Eigen::Vector2d> pts_detected_in_corres_order;
 
-            std::vector<landmark> registered_landmarks;
+            
 
-            void process_landmarks(
+            bool process_landmarks(
                 std::vector<gtsam::Point2> pts_2d_detect,
                 std::vector<gtsam::Point3> pts_3d_detect,
                 bool initialing
             );
             
             std::vector<Eigen::Vector2d> LED_extract_POI(cv::Mat& frame, cv::Mat depth);
-            std::vector<Eigen::Vector2d> LED_extract_POI_alter(cv::Mat& frame);
-            std::vector<gtsam::Point3> pointcloud_generate(
-                std::vector<gtsam::Point2> pts_2d_detected, 
-                cv::Mat depthimage
-            );
+            
+            
 
         // correspondence search
             //objects
@@ -307,12 +344,63 @@ namespace alan
                 ros::NodeHandle& nh = getMTNodeHandle();
                 ROS_INFO("LED Nodelet Initiated...");
 
+                doALOTofConfigs(nh);
+                registerRosCommunicate(nh);    
+
+                batchsmoother = std::make_unique<gtsam::BatchFixedLagSmoother>(
+                    batchLag,
+                    batchLMparameters
+                );
+
+                x_current = gtsam::Pose3().Identity();
+                x_current.print();
+
+                timeStart = ros::Time::now().toSec();
+                K = std::make_shared<gtsam::Cal3_S2>(
+                    cameraMat(0,0),
+                    cameraMat(1,1),
+                    0.0,
+                    cameraMat(0,2),
+                    cameraMat(1,2)
+                );
+
+                std::cout<<cameraMat<<std::endl<<std::endl;;
+                std::cout<<K->K()<<std::endl;
+
+                traj_points.header.frame_id = "world";
+    
+                traj_points.ns = "GT_points";
+
+                traj_points.id = 0;
+                traj_points.action = visualization_msgs::Marker::ADD;
+                traj_points.pose.orientation.w = 1.0;
+                traj_points.type = visualization_msgs::Marker::SPHERE_LIST;
+                traj_points.scale.x = traj_points.scale.y = traj_points.scale.z = 0.02;
+                traj_points.color.a=1;
+                traj_points.color.g=1;
+                traj_points.color.r=0;
+                traj_points.color.b=0;
                 
+
+            }
+
+            inline void doALOTofConfigs(ros::NodeHandle& nh)
+            {
+                std::cout<<"configs here"<<std::endl;
+                POI_config(nh);
+                camIntrinsic_config(nh);
+                camExtrinsic_config(nh);
+                LEDExtrinsicUAV_config(nh);
+                CamInGeneralBody_config(nh);
+                LEDInBodyAndOutlierSetting_config(nh);
+                KF_config(nh);
+            }
+
+            inline void registerRosCommunicate(ros::NodeHandle& nh)
+            {
                 RosTopicConfigs configs(nh, "/led");
 
-                doALOTofConfigs(nh);
-                                                 
-            //subscribe                
+                //subscribe                
                 subimage.subscribe(nh, configs.getTopicName(COLOR_SUB_TOPIC), 1);                
                 subdepth.subscribe(nh, configs.getTopicName(DEPTH_SUB_TOPIC), 1);                
                 sync_.reset(new sync( MySyncPolicy(10), subimage, subdepth));            
@@ -359,21 +447,11 @@ namespace alan
                                 ("/visual_odometry/led/led_log", 1);
                 
                 record_uav_pub = nh.advertise<visual_odometry::alan_log>
-                                ("/visual_odometry/led/uav_log", 1);            
-            }
+                                ("/visual_odometry/led/uav_log", 1);  
 
-            inline void doALOTofConfigs(ros::NodeHandle& nh)
-            {
-                std::cout<<"configs here"<<std::endl;
-                POI_config(nh);
-                camIntrinsic_config(nh);
-                camExtrinsic_config(nh);
-                LEDExtrinsicUAV_config(nh);
-                CamInGeneralBody_config(nh);
-                LEDInBodyAndOutlierSetting_config(nh);
-                KF_config(nh);
+                lm_pub = nh.advertise<visualization_msgs::Marker>("/gt_points/traj", 1, true);
 
-                led_twist_current.resize(6);
+
             }
 
             inline void POI_config(ros::NodeHandle& nh)
@@ -393,20 +471,19 @@ namespace alan
             inline void camIntrinsic_config(ros::NodeHandle& nh)
             {
                 // load camera intrinsics
-                Eigen::Vector4d intrinsics_value;
                 XmlRpc::XmlRpcValue intrinsics_list;
                 nh.getParam("/alan_master/cam_intrinsics_455", intrinsics_list);
-                                                
-                for(int i = 0; i < 4; i++)
-                {
-                    intrinsics_value[i] = intrinsics_list[i];
-                }
+
+                for(int i = 0; i < 3; i++)
+                    for(int j = 0; j < 3; j++)
+                    {
+                        std::ostringstream ostr;
+                        ostr << intrinsics_list[3 * i+ j];
+                        std::istringstream istr(ostr.str());
+                        istr >> cameraMat(i, j);
+                    }
+
                 
-                cameraMat <<    
-                    // inherintance here -> modifying value for all super/sub classes
-                    intrinsics_value[0], 0, intrinsics_value[2], 
-                    0, intrinsics_value[1], intrinsics_value[3],
-                    0, 0,  1; 
 
             }
 
