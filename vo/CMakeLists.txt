@@ -132,15 +132,15 @@ add_dependencies(lala
 
 ############################################################################
 
-# add_executable(data
-#   src/data.cpp
-# )
+add_executable(data
+  src/data.cpp
+)
 
-# target_link_libraries(data
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(data
+  ${catkin_LIBRARIES}
+)
 
-# set_property(TARGET data PROPERTY CXX_STANDARD 17)
+set_property(TARGET data PROPERTY CXX_STANDARD 17)
 
   
   
