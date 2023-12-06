@@ -1,13 +1,18 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.16)
 project(visual_odometry)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++17)
+add_compile_options(-std=c++14)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 
-find_package(catkin COMPONENTS
+# set(LIBTORCH_FOLDER_NAME "libtorch")
+# set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${LIBTORCH_FOLDER_NAME}" ${CMAKE_PREFIX_PATH})
+
+set(Torch_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libtorch/share/cmake/Torch/")
+
+find_package(catkin REQUIRED COMPONENTS
   nodelet
   roscpp
   std_msgs
@@ -22,6 +27,8 @@ find_package(catkin COMPONENTS
   visualization_msgs
   tf
 )
+find_package(Torch REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 find_package(OpenCV 4 REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -70,23 +77,33 @@ catkin_package(
 
 set(Sophus_LIBRARIES libSophus.so)
 
+
+###########
+## Build ##
+###########
+
 include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${Sophus_INCLUDE_DIRS}
 )
+
+############################################################################
+## Declare a C++ library
 
 add_library(alan
   src/led.cpp
   src/tools/RosTopicConfigs.cpp
   )
 
-## Specify libraries to link a library or executable target against
+# Specify libraries to link a library or executable target against
 target_link_libraries(
   alan
   ${catkin_LIBRARIES}
   ${OpenCV_INCLUDE_DIRS}
   ${Sophus_INCLUDE_DIRS}
+  ${TORCH_LIBRARIES}
   gtsam
   gtsam_unstable
 )
@@ -96,6 +113,7 @@ add_dependencies(
 )
 
 ############################################################################
+## Declare C++ executables
 
 add_executable(lala
   src/lala.cpp
@@ -105,21 +123,25 @@ target_link_libraries(lala
   ${catkin_LIBRARIES}
   gtsam
   gtsam_unstable
+  ${TORCH_LIBRARIES}
 )
 
 add_dependencies(lala
   visual_odometry_generate_messages_cpp
-  )
+)
 
 ############################################################################
 
-add_executable(data
-  src/data.cpp
-)
+# add_executable(data
+#   src/data.cpp
+# )
 
-target_link_libraries(data
-  ${catkin_LIBRARIES}
-)
+# target_link_libraries(data
+#   ${catkin_LIBRARIES}
+# )
+
+# set_property(TARGET data PROPERTY CXX_STANDARD 17)
+
   
   
 

@@ -2,3 +2,4 @@
 *.bag
 *.zip
 *.csv
+libtorch/

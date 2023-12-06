@@ -64,11 +64,17 @@
  #include <gtsam/nonlinear/BatchFixedLagSmoother.h>
  #include <gtsam/nonlinear/FixedLagSmoother.h>
 
+ 
+
+#include <torch/torch.h>
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "planner_node");
     ros::NodeHandle nh("~");
+
+    torch::Tensor tensor = torch::rand({2, 3});
+  std::cout << tensor << std::endl;
 
     using namespace gtsam;
     using namespace std;
