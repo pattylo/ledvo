@@ -15,7 +15,7 @@
     along with LEDVO.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/**
+/*
  * \file lala.cpp
  * \date 06/11/2023
  * \author pattylo

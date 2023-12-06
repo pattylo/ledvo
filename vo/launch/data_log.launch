@@ -1,0 +1,6 @@
+<launch>
+    <node name="data" pkg="visual_odometry" type="data" output="screen">
+        <param name="/log_path" type="string" value="/home/patty/ledvo_ws/src/ledvo/vo/data/"/>
+        <param name="/filename" type="string" value="irz_super.csv"/>
+    </node>         
+</launch>

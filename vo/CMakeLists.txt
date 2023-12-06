@@ -95,6 +95,8 @@ add_dependencies(
   visual_odometry_generate_messages_cpp
 )
 
+############################################################################
+
 add_executable(lala
   src/lala.cpp
 )
@@ -109,7 +111,17 @@ add_dependencies(lala
   visual_odometry_generate_messages_cpp
   )
 
+############################################################################
 
+add_executable(data
+  src/data.cpp
+)
+
+target_link_libraries(data
+  ${catkin_LIBRARIES}
+)
+  
+  
 
 
 
