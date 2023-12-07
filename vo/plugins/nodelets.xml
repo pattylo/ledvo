@@ -1,30 +1,16 @@
-<library path="lib/libalan">
-    <class name ="alan/ArucoNodelet" 
-        type="alan::ArucoNodelet"
+<library path="lib/libledvo">
+    <!-- <class name ="ledvo/ArucoNodelet" 
+        type="ledvo::ArucoNodelet"
         base_class_type="nodelet::Nodelet">
         <description>
             Launch nodelet here. Aruco it is.
         </description>
-    </class>
-    <class name ="alan/CnnNodelet" 
-        type="alan::CnnNodelet"
-        base_class_type="nodelet::Nodelet">
-        <description>
-            Launch nodelet here. CNN it is.
-        </description>
-    </class>
-    <class name ="alan/LedNodelet" 
-        type="alan::LedNodelet"
+    </class> -->
+    <class name ="ledvo/LedNodelet" 
+        type="ledvo::LedNodelet"
         base_class_type="nodelet::Nodelet">
         <description>
             Launch nodelet here. LED it is.
-        </description>
-    </class>
-    <class name ="alan/MsgSyncNodelet" 
-        type="alan::MsgSyncNodelet"
-        base_class_type="nodelet::Nodelet">
-        <description>
-            Launch nodelet here. MsgSync it is.
         </description>
     </class>
 

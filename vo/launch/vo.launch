@@ -4,12 +4,12 @@
 
 
     <!-- ROS Nodelet manager -->
-    <node pkg="nodelet" type="nodelet" name="alan_master" args="manager" output="screen">
-            <rosparam command="load" file="$(find visual_odometry)/launch/configs/alan_pose_estimation.yaml" />
+    <node pkg="nodelet" type="nodelet" name="ledvo_master" args="manager" output="screen">
+            <rosparam command="load" file="$(find visual_odometry)/launch/configs/ledvo_pose_estimation.yaml" />
     </node> 
 
     <!-- LedNodelet -->
-    <node pkg="nodelet" type="nodelet" name="led" args="load alan/LedNodelet alan_master" output="screen">
+    <node pkg="nodelet" type="nodelet" name="led" args="load ledvo/LedNodelet ledvo_master" output="screen">
         <rosparam command="load" file="$(find visual_odometry)/launch/configs/LED_SUBPUB_topics.yaml" />
     </node> 
 

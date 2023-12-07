@@ -54,7 +54,7 @@
 #include <vector>
 
 #include <gtsam/nonlinear/FixedLagSmoother.h>
-#include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
+// #include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
 
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 

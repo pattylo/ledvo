@@ -25,7 +25,7 @@
 
 #include "include/led.h"
 
-void alan::LedNodelet::camera_callback(
+void ledvo::LedNodelet::camera_callback(
     const sensor_msgs::CompressedImage::ConstPtr& rgbmsg, 
     const sensor_msgs::Image::ConstPtr& depthmsg
 )
@@ -93,7 +93,7 @@ void alan::LedNodelet::camera_callback(
 
 } 
 
-void alan::LedNodelet::solve_pose_w_LED(cv::Mat& frame, cv::Mat depth)
+void ledvo::LedNodelet::solve_pose_w_LED(cv::Mat& frame, cv::Mat depth)
 {   
     
     if(!LED_tracker_initiated_or_tracked)
@@ -102,7 +102,7 @@ void alan::LedNodelet::solve_pose_w_LED(cv::Mat& frame, cv::Mat depth)
         recursive_filtering(frame, depth);
 }
 
-void alan::LedNodelet::initialization(cv::Mat& frame, cv::Mat depth)
+void ledvo::LedNodelet::initialization(cv::Mat& frame, cv::Mat depth)
 {
     std::vector<gtsam::Point2> pts_2d_detect = LED_extract_POI_alter(frame);
 
@@ -120,14 +120,14 @@ void alan::LedNodelet::initialization(cv::Mat& frame, cv::Mat depth)
     return;
 }
 
-void alan::LedNodelet::recursive_filtering(cv::Mat& frame, cv::Mat depth)
+void ledvo::LedNodelet::recursive_filtering(cv::Mat& frame, cv::Mat depth)
 {
     std::vector<gtsam::Point2> pts_2d_detect;
     std::cout<<"gan"<<std::endl;
     pts_2d_detect = LED_extract_POI_alter(frame);
 }
 
-std::vector<gtsam::Point2> alan::LedNodelet::LED_extract_POI_alter(cv::Mat& frame)
+std::vector<gtsam::Point2> ledvo::LedNodelet::LED_extract_POI_alter(cv::Mat& frame)
 {   
     std::vector<gtsam::Point2> pts_2d_detected;
 
@@ -172,7 +172,7 @@ std::vector<gtsam::Point2> alan::LedNodelet::LED_extract_POI_alter(cv::Mat& fram
 }
 
 
-std::vector<gtsam::Point3> alan::LedNodelet::pointcloud_generate(
+std::vector<gtsam::Point3> ledvo::LedNodelet::pointcloud_generate(
     std::vector<gtsam::Point2>& pts_2d_detected, 
     cv::Mat depthimage
 )
@@ -261,7 +261,7 @@ std::vector<gtsam::Point3> alan::LedNodelet::pointcloud_generate(
     return pointclouds;
 }
 
-bool alan::LedNodelet::process_landmarks(
+bool ledvo::LedNodelet::process_landmarks(
     std::vector<gtsam::Point2> pts_2d_detect,
     std::vector<gtsam::Point3> pts_3d_detect,
     bool initialing
@@ -376,7 +376,7 @@ bool alan::LedNodelet::process_landmarks(
 
 
 
-Sophus::SE3d alan::LedNodelet::posemsg_to_SE3(const geometry_msgs::PoseStamped pose)
+Sophus::SE3d ledvo::LedNodelet::posemsg_to_SE3(const geometry_msgs::PoseStamped pose)
 {
     return Sophus::SE3d(
         Eigen::Quaterniond(
@@ -393,7 +393,7 @@ Sophus::SE3d alan::LedNodelet::posemsg_to_SE3(const geometry_msgs::PoseStamped p
     );
 }
 
-geometry_msgs::PoseStamped alan::LedNodelet::SE3_to_posemsg(
+geometry_msgs::PoseStamped ledvo::LedNodelet::SE3_to_posemsg(
     const Sophus::SE3d pose_on_SE3, 
     const std_msgs::Header msgHeader
 )
@@ -413,7 +413,7 @@ geometry_msgs::PoseStamped alan::LedNodelet::SE3_to_posemsg(
     return returnPoseMsg;
 }
 
-void alan::LedNodelet::ugv_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
+void ledvo::LedNodelet::ugv_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
 {
     pose_cam_inWorld_SE3 = pose_ugv_inWorld_SE3 * pose_cam_inUgvBody_SE3;
 
@@ -431,7 +431,7 @@ void alan::LedNodelet::ugv_pose_callback(const geometry_msgs::PoseStamped::Const
     ugvpose_pub.publish(ugv_pose_msg);
 }
 
-void alan::LedNodelet::uav_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
+void ledvo::LedNodelet::uav_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
 {
     pose_uav_inWorld_SE3 = posemsg_to_SE3(*pose);
     
@@ -440,12 +440,12 @@ void alan::LedNodelet::uav_pose_callback(const geometry_msgs::PoseStamped::Const
     uavpose_pub.publish(uav_pose_msg);
 }
 
-void alan::LedNodelet::uav_setpt_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
+void ledvo::LedNodelet::uav_setpt_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
 {
     uav_stpt_msg = *pose;
 }
 
-void alan::LedNodelet::map_SE3_to_pose(Sophus::SE3d pose_led_inCamera_SE3)
+void ledvo::LedNodelet::map_SE3_to_pose(Sophus::SE3d pose_led_inCamera_SE3)
 {   
     pose_cam_inGeneralBodySE3 * pose_led_inCamera_SE3; //now we in body frame
 
@@ -490,7 +490,7 @@ void alan::LedNodelet::map_SE3_to_pose(Sophus::SE3d pose_led_inCamera_SE3)
 
 
 
-void alan::LedNodelet::apiKF(int DOKF)
+void ledvo::LedNodelet::apiKF(int DOKF)
 {
     switch (DOKF)
     {
@@ -525,7 +525,7 @@ void alan::LedNodelet::apiKF(int DOKF)
         if(BA_error > 4 * LED_no)
         {
             LED_tracker_initiated_or_tracked = false;
-            cv::imwrite("/home/patty/alan_ws/BA" + std::to_string(BA_error) + ".jpg", frame_input);
+            cv::imwrite("/home/patty/ledvo_ws/BA" + std::to_string(BA_error) + ".jpg", frame_input);
         }
 
         break;
@@ -538,7 +538,7 @@ void alan::LedNodelet::apiKF(int DOKF)
 
 
 
-void alan::LedNodelet::get_correspondence(
+void ledvo::LedNodelet::get_correspondence(
     std::vector<Eigen::Vector2d>& pts_2d_detected
 )
 {
@@ -593,7 +593,7 @@ void alan::LedNodelet::get_correspondence(
         else
             pts_detected_previous_in_order = pts;
 
-        // cv::imwrite("/home/patty/alan_ws/lala" + std::to_string(i) + ".jpg", frame_input);
+        // cv::imwrite("/home/patty/ledvo_ws/lala" + std::to_string(i) + ".jpg", frame_input);
         // pc::pattyDebug("check check");
         
     }
@@ -632,7 +632,7 @@ void alan::LedNodelet::get_correspondence(
         
 }
 
-std::vector<Eigen::Vector2d> alan::LedNodelet::shift2D(
+std::vector<Eigen::Vector2d> ledvo::LedNodelet::shift2D(
     std::vector<Eigen::Vector2d>& pts_2D_previous,
     std::vector<Eigen::Vector2d>& pts_detect_current
 )
@@ -691,7 +691,7 @@ std::vector<Eigen::Vector2d> alan::LedNodelet::shift2D(
     return shifted_pts;
 }
 
-void alan::LedNodelet::solve_pnp_initial_pose(std::vector<Eigen::Vector2d> pts_2d, std::vector<Eigen::Vector3d> pts_3d)
+void ledvo::LedNodelet::solve_pnp_initial_pose(std::vector<Eigen::Vector2d> pts_2d, std::vector<Eigen::Vector3d> pts_3d)
 {
     Eigen::Matrix3d R;
     Eigen::Vector3d t;
@@ -789,7 +789,7 @@ void alan::LedNodelet::solve_pnp_initial_pose(std::vector<Eigen::Vector2d> pts_2
 }
 
 /* ================ POI Extraction utilities function below ================ */
-std::vector<Eigen::Vector2d> alan::LedNodelet::LED_extract_POI(cv::Mat& frame, cv::Mat depth)
+std::vector<Eigen::Vector2d> ledvo::LedNodelet::LED_extract_POI(cv::Mat& frame, cv::Mat depth)
 {   
     cv::Mat depth_mask_src = depth.clone(), depth_mask_dst1, depth_mask_dst2;
 
@@ -853,7 +853,7 @@ std::vector<Eigen::Vector2d> alan::LedNodelet::LED_extract_POI(cv::Mat& frame, c
 
 /* ================ k-means utilities function below ================ */
 
-void alan::LedNodelet::correspondence_search_2D2DCompare(
+void ledvo::LedNodelet::correspondence_search_2D2DCompare(
     std::vector<Eigen::Vector2d>& pts_2d_detected,
     std::vector<Eigen::Vector2d>& pts_2d_detected_previous
 )
@@ -907,7 +907,7 @@ void alan::LedNodelet::correspondence_search_2D2DCompare(
     }    
 }
 
-inline double alan::LedNodelet::calculate_MAD(std::vector<double> norm_of_points)
+inline double ledvo::LedNodelet::calculate_MAD(std::vector<double> norm_of_points)
 {
     int n = norm_of_points.size();
     double mean = 0, delta_sum = 0, MAD;
@@ -934,7 +934,7 @@ inline double alan::LedNodelet::calculate_MAD(std::vector<double> norm_of_points
 //     center at previous time step(pcl_center_point_wo_outlier_previous)
 //     and determine which cluster is the one that we want */
 
-// void alan::LedNodelet::reject_outlier(std::vector<Eigen::Vector2d>& pts_2d_detect, cv::Mat depth)
+// void ledvo::LedNodelet::reject_outlier(std::vector<Eigen::Vector2d>& pts_2d_detect, cv::Mat depth)
 // {
 //     // std::vector<Eigen::Vector3d> pts_3d_detect = pointcloud_generate(pts_2d_detect, depth);
 //     //what is this for?
@@ -1025,7 +1025,7 @@ inline double alan::LedNodelet::calculate_MAD(std::vector<double> norm_of_points
 
 /* ================ UI utilities function below ================ */
 
-void alan::LedNodelet::set_image_to_publish(double freq, const sensor_msgs::CompressedImageConstPtr & rgbmsg)
+void ledvo::LedNodelet::set_image_to_publish(double freq, const sensor_msgs::CompressedImageConstPtr & rgbmsg)
 {    
     char hz[40];
     char fps[10] = " fps";
@@ -1063,9 +1063,9 @@ void alan::LedNodelet::set_image_to_publish(double freq, const sensor_msgs::Comp
 
 }
 
-void alan::LedNodelet::log(double ms)
+void ledvo::LedNodelet::log(double ms)
 {
-    visual_odometry::alan_log logdata_entry_led;
+    visual_odometry::ledvo_log logdata_entry_led;
     
     logdata_entry_led.px = pose_led_inWorld_SE3.translation().x();
     logdata_entry_led.py = pose_led_inWorld_SE3.translation().y();
@@ -1108,7 +1108,7 @@ void alan::LedNodelet::log(double ms)
 
     ///////////////////////////////////////////////////////////
 
-    visual_odometry::alan_log logdata_entry_uav;
+    visual_odometry::ledvo_log logdata_entry_uav;
     
     logdata_entry_uav.px = pose_uav_inWorld_SE3.translation().x();
     logdata_entry_uav.py = pose_uav_inWorld_SE3.translation().y();
@@ -1130,11 +1130,11 @@ void alan::LedNodelet::log(double ms)
     record_uav_pub.publish(logdata_entry_uav);
 
     // std::cout<<"orientation: "<<abs(logdata_entry_led.orientation - logdata_entry_uav.orientation)<<std::endl;
-    // std::ofstream save("/home/patty/alan_ws/src/alan/visual_odometry/src/temp/lala.txt", std::ios::app);
+    // std::ofstream save("/home/patty/ledvo_ws/src/ledvo/visual_odometry/src/temp/lala.txt", std::ios::app);
     // save<<abs(logdata_entry_led.orientation - logdata_entry_uav.orientation)<<std::endl;
 }
 
-void alan::LedNodelet::terminal_msg_display(double hz)
+void ledvo::LedNodelet::terminal_msg_display(double hz)
 {
     std::string LED_terminal_display = "DETECT_no: " + std::to_string(detect_no);
 

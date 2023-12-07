@@ -2,7 +2,7 @@
 <package format="2">
   <name>visual_odometry</name>
   <version>0.0.0</version>
-  <description>The alan package</description>
+  <description>The ledvo package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

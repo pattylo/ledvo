@@ -63,7 +63,7 @@
 
 
 #include "tools/RosTopicConfigs.h"
-#include "visual_odometry/alan_log.h"
+#include "visual_odometry/ledvo_log.h"
 
 #include "aiekf.hpp"
 #include "cameraModel.hpp"
@@ -95,7 +95,7 @@ namespace correspondence
         }matchid;
 }
 
-namespace alan
+namespace ledvo
 {
     typedef struct landmark
     {
@@ -443,10 +443,10 @@ namespace alan
                 //only used for validation stage
                                 (configs.getTopicName(CAM_POSE_PUB_TOPIC), 1, true);    
                 
-                record_led_pub = nh.advertise<visual_odometry::alan_log>
+                record_led_pub = nh.advertise<visual_odometry::ledvo_log>
                                 ("/visual_odometry/led/led_log", 1);
                 
-                record_uav_pub = nh.advertise<visual_odometry::alan_log>
+                record_uav_pub = nh.advertise<visual_odometry::ledvo_log>
                                 ("/visual_odometry/led/uav_log", 1);  
 
                 lm_pub = nh.advertise<visualization_msgs::Marker>("/gt_points/traj", 1, true);
@@ -457,22 +457,22 @@ namespace alan
             inline void POI_config(ros::NodeHandle& nh)
             {
                 // load POI_extract config
-                nh.getParam("/alan_master/LANDING_DISTANCE", LANDING_DISTANCE);     
-                nh.getParam("/alan_master/BINARY_threshold", BINARY_THRES);     
-                nh.getParam("/alan_master/frame_width", _width);
-                nh.getParam("/alan_master/frame_height", _height);
+                nh.getParam("/ledvo_master/LANDING_DISTANCE", LANDING_DISTANCE);     
+                nh.getParam("/ledvo_master/BINARY_threshold", BINARY_THRES);     
+                nh.getParam("/ledvo_master/frame_width", _width);
+                nh.getParam("/ledvo_master/frame_height", _height);
 
                 // #define CAR_POSE_TOPIC POSE_SUB_TOPIC_A
                 // std::cout<<CAR_POSE_TOPIC<<std::endl;
-                // nh.getParam("/alan_master/CAR_POSE_TOPIC", CAR_POSE_TOPIC);
-                // nh.getParam("/alan_master/UAV_POSE_TOPIC", UAV_POSE_TOPIC);
+                // nh.getParam("/ledvo_master/CAR_POSE_TOPIC", CAR_POSE_TOPIC);
+                // nh.getParam("/ledvo_master/UAV_POSE_TOPIC", UAV_POSE_TOPIC);
             }
 
             inline void camIntrinsic_config(ros::NodeHandle& nh)
             {
                 // load camera intrinsics
                 XmlRpc::XmlRpcValue intrinsics_list;
-                nh.getParam("/alan_master/cam_intrinsics_455", intrinsics_list);
+                nh.getParam("/ledvo_master/cam_intrinsics_455", intrinsics_list);
 
                 for(int i = 0; i < 3; i++)
                     for(int j = 0; j < 3; j++)
@@ -492,7 +492,7 @@ namespace alan
                 cameraEX.resize(6);
                 XmlRpc::XmlRpcValue extrinsics_list;
                 
-                nh.getParam("/alan_master/cam_ugv_extrinsics", extrinsics_list);                
+                nh.getParam("/ledvo_master/cam_ugv_extrinsics", extrinsics_list);                
                 
                 for(int i = 0; i < 6; i++)
                 {                    
@@ -521,7 +521,7 @@ namespace alan
                 LEDEX.resize(6);
                 XmlRpc::XmlRpcValue extrinsics_list_led;
 
-                nh.getParam("/alan_master/led_uav_extrinsics", extrinsics_list_led);
+                nh.getParam("/ledvo_master/led_uav_extrinsics", extrinsics_list_led);
 
                 for(int i = 0; i < 6; i++)
                 {
@@ -557,7 +557,7 @@ namespace alan
             {
                 //load LED potisions in body frame
                 XmlRpc::XmlRpcValue LED_list;
-                nh.getParam("/alan_master/LED_positions", LED_list); 
+                nh.getParam("/ledvo_master/LED_positions", LED_list); 
 
                 std::vector<double> norm_of_x_points, norm_of_y_points, norm_of_z_points;
 
@@ -577,12 +577,12 @@ namespace alan
 
                 LED_no = pts_on_body_frame.size();
 
-                nh.getParam("/alan_master/LED_r_number", LED_r_no);
-                nh.getParam("/alan_master/LED_g_number", LED_g_no);
+                nh.getParam("/ledvo_master/LED_r_number", LED_r_no);
+                nh.getParam("/ledvo_master/LED_g_number", LED_g_no);
 
                 //load outlier rejection info
-                nh.getParam("/alan_master/MAD_dilate", MAD_dilate);
-                nh.getParam("/alan_master/MAD_max", MAD_max);
+                nh.getParam("/ledvo_master/MAD_dilate", MAD_dilate);
+                nh.getParam("/ledvo_master/MAD_max", MAD_max);
 
                 MAD_x_threshold = (calculate_MAD(norm_of_x_points) * MAD_dilate > MAD_max ? MAD_max : calculate_MAD(norm_of_x_points) * MAD_dilate);
                 MAD_y_threshold = (calculate_MAD(norm_of_y_points) * MAD_dilate > MAD_max ? MAD_max : calculate_MAD(norm_of_y_points) * MAD_dilate);
@@ -600,14 +600,14 @@ namespace alan
                 double Q_val;
                 double R_val;
 
-                nh.getParam("/alan_master/Q_val", Q_val);
-                nh.getParam("/alan_master/R_val", R_val);
-                nh.getParam("/alan_master/Q_alpha", QAdaptiveAlpha);
-                nh.getParam("/alan_master/R_beta", RAdaptiveBeta);
-                nh.getParam("/alan_master/kf_size", kf_size);
-                nh.getParam("/alan_master/kfZ_size", kfZ_size);
-                nh.getParam("/alan_master/OPT_MAX_ITERATION", MAX_ITERATION);
-                nh.getParam("/alan_master/CONVERGE_THRESHOLD", CONVERGE_THRESHOLD);
+                nh.getParam("/ledvo_master/Q_val", Q_val);
+                nh.getParam("/ledvo_master/R_val", R_val);
+                nh.getParam("/ledvo_master/Q_alpha", QAdaptiveAlpha);
+                nh.getParam("/ledvo_master/R_beta", RAdaptiveBeta);
+                nh.getParam("/ledvo_master/kf_size", kf_size);
+                nh.getParam("/ledvo_master/kfZ_size", kfZ_size);
+                nh.getParam("/ledvo_master/OPT_MAX_ITERATION", MAX_ITERATION);
+                nh.getParam("/ledvo_master/CONVERGE_THRESHOLD", CONVERGE_THRESHOLD);
 
                 Q_init.resize(kf_size, kf_size);
                 Q_init.setIdentity();
@@ -619,7 +619,7 @@ namespace alan
             }
     };
 
-    PLUGINLIB_EXPORT_CLASS(alan::LedNodelet, nodelet::Nodelet)
+    PLUGINLIB_EXPORT_CLASS(ledvo::LedNodelet, nodelet::Nodelet)
 }
 
 #endif
