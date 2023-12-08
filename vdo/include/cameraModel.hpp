@@ -35,50 +35,58 @@ namespace vision{
     private:
         
     public:
-        cameraModel();
-        ~cameraModel();
+        cameraModel(){};
+        ~cameraModel(){};
 
-        virtual Eigen::Vector2d reproject_3D_2D(Eigen::Vector3d P, Sophus::SE3d pose);
+        inline Eigen::Vector2d reproject_3D_2D(Eigen::Vector3d P, Sophus::SE3d pose);
         virtual double get_reprojection_error(
             std::vector<Eigen::Vector3d> pts_3d, 
             std::vector<Eigen::Vector2d> pts_2d, 
             Sophus::SE3d pose,
             bool draw_reproject
-        );
-        virtual void camOptimize(
+        )
+        {
+            double e = 0;
+
+            Eigen::Vector2d reproject, error;
+
+            for(int i = 0; i < pts_3d.size(); i++)
+            {
+                reproject = reproject_3D_2D(pts_3d[i], pose);
+                error = pts_2d[i] - reproject;
+                e = e + error.norm();
+            }
+
+            return e;
+
+        };
+
+        inline void camOptimize(
             Sophus::SE3d& pose, 
             std::vector<Eigen::Vector3d> pts_3d_exists, 
             std::vector<Eigen::Vector2d> pts_2d_detected,
             double& BA_error
         );
-        virtual void solveJacobianCamera(
+        inline void solveJacobianCamera(
             Eigen::MatrixXd& Jacob, 
             Sophus::SE3d pose, 
             Eigen::Vector3d point_3d
         );
 
-        inline virtual Eigen::Vector3d q2rpy(Eigen::Quaterniond q) final;
-        inline virtual Eigen::Quaterniond rpy2q(Eigen::Vector3d rpy) final;
-        inline virtual Eigen::Vector3d q_rotate_vector(
+        inline Eigen::Vector3d q2rpy(Eigen::Quaterniond q);
+        inline Eigen::Quaterniond rpy2q(Eigen::Vector3d rpy);
+        inline Eigen::Vector3d q_rotate_vector(
             Eigen::Quaterniond q, 
             Eigen::Vector3d v
-        ) final;
+        );
 
-        static Eigen::MatrixXd cameraMat;
+        Eigen::MatrixXd cameraMat = Eigen::MatrixXd::Zero(3,3);
         
     };
     
-    cameraModel::cameraModel()
-    {
-    }
-    
-    cameraModel::~cameraModel()
-    {
-    }
-    
 }
 
-Eigen::MatrixXd vision::cameraModel::cameraMat = Eigen::MatrixXd::Zero(3,3);
+// Eigen::MatrixXd vision::cameraModel::cameraMat = Eigen::MatrixXd::Zero(3,3);
 
 Eigen::Vector2d vision::cameraModel::reproject_3D_2D(Eigen::Vector3d P, Sophus::SE3d pose)
 {
@@ -96,28 +104,6 @@ Eigen::Vector2d vision::cameraModel::reproject_3D_2D(Eigen::Vector3d P, Sophus::
         result(1)/result(2);
     
     return result2d;
-}
-
-double vision::cameraModel::get_reprojection_error(
-            std::vector<Eigen::Vector3d> pts_3d, 
-            std::vector<Eigen::Vector2d> pts_2d, 
-            Sophus::SE3d pose,
-            bool draw_reproject
-)
-{
-    double e = 0;
-
-    Eigen::Vector2d reproject, error;
-
-    for(int i = 0; i < pts_3d.size(); i++)
-    {
-        reproject = reproject_3D_2D(pts_3d[i], pose);
-        error = pts_2d[i] - reproject;
-        e = e + error.norm();
-    }
-
-    return e;
-
 }
 
 void vision::cameraModel::camOptimize(

@@ -159,28 +159,21 @@ private:
     ros::NodeHandle nh;
     XmlRpc::XmlRpcValue TOPICLIST;
 
-    void setupTOPICLIST();
+    inline void setupTOPICLIST();
     std::vector<CONFIG_SETUP> object_ConfigLIST;
     
     
 public:
-    RosTopicConfigs(ros::NodeHandle& _nh, std::string param_namespace);
-    ~RosTopicConfigs();
+    RosTopicConfigs(ros::NodeHandle& _nh, std::string param_namespace): nh(_nh)
+    {
+        nh.getParam(param_namespace + "/TOPICLIST", TOPICLIST);
 
-    std::string getTopicName(std::string designated_name);
+        setupTOPICLIST();
+    }
+    ~RosTopicConfigs(){};
+
+    inline std::string getTopicName(std::string designated_name);
 };
-
-RosTopicConfigs::RosTopicConfigs(ros::NodeHandle& _nh, std::string param_namespace)
-: nh(_nh)
-{
-    nh.getParam(param_namespace + "/TOPICLIST", TOPICLIST);
-
-    setupTOPICLIST();
-}
-
-RosTopicConfigs::~RosTopicConfigs()
-{
-}
 
 std::string RosTopicConfigs::getTopicName(std::string designated_types)
 {

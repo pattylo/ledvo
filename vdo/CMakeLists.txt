@@ -84,12 +84,15 @@ include_directories(
 ## Declare a C++ library
 
 add_library(ledvo
-  src/ledvo/led.cpp
-  )
+  src/ledvo/ledvo.cpp
+  src/ledvo/config.cpp
+  src/ledvo/landmarks.cpp
+  src/ledvo/dynamics.cpp
+  src/ledvo/fgo.cpp
+)
 
 # Specify libraries to link a library or executable target against
-target_link_libraries(
-  ledvo
+target_link_libraries(ledvo
   ${catkin_LIBRARIES}
   ${OpenCV_INCLUDE_DIRS}
   ${Sophus_INCLUDE_DIRS}
@@ -97,8 +100,7 @@ target_link_libraries(
   gtsam
   gtsam_unstable
 )
-add_dependencies(
-  ledvo
+add_dependencies(ledvo
   vdo_generate_messages_cpp
 )
 

@@ -16,116 +16,14 @@
 */
 
 /**
- * \file led.cpp
- * \date 08/11/2023
+ * \file landmarks.cpp
+ * \date 08/12/2023
  * \author pattylo
  * \copyright (c) AIRO-LAB, RCUAS of Hong Kong Polytechnic University
  * \brief classes for vision-based relative localization for UAV and UGV based on LED markers
  */
 
-#include "include/led.h"
-
-void ledvo::LedNodelet::camera_callback(
-    const sensor_msgs::CompressedImage::ConstPtr& rgbmsg, 
-    const sensor_msgs::Image::ConstPtr& depthmsg
-)
-{
-    cv_bridge::CvImageConstPtr depth_ptr;
-    led_pose_header = rgbmsg->header;
-
-    try
-    {
-        depth_ptr  = cv_bridge::toCvCopy(depthmsg, depthmsg->encoding);
-    }
-    catch (cv_bridge::Exception& e)
-    {
-        ROS_ERROR("cv_bridge exception: %s", e.what());
-        return;
-    }
-
-    cv::Mat depth = depth_ptr->image;
-
-    try
-    {
-        frame = cv::imdecode(cv::Mat(rgbmsg->data), 1);
-        display = frame.clone();
-        hsv = frame.clone();
-        frame_temp = frame.clone();
-    }
-    catch (cv_bridge::Exception& e)
-    {
-        ROS_ERROR("cv_bridge exception: %s", e.what());
-    }
-
-    double tick = ros::Time::now().toSec(); 
-
-    // if(tick - last_request > ros::Duration(0.1).toSec() && nodelet_activated)
-    // {
-    //     LED_tracker_initiated_or_tracked = false;
-    //     printf("\033c");
-    //     ROS_RED_STREAM("RESET TERMINAL!");
-    // }           
-           
-    solve_pose_w_LED(frame, depth);
-
-
-    // std::cout<<"hi?"<<std::endl;
-    
-    // double tock = ros::Time::now().toSec();  
-
-    // if(tracker_started)
-    //     total_no++;
-
-    // terminal_msg_display(1 / (tock - tick));
-
-    // set_image_to_publish(1 / (tock - tick), rgbmsg);
-
-    // if(LED_tracker_initiated_or_tracked)
-    //     log(tock - tick);
-                    
-    // last_request = ros::Time::now().toSec();
-
-    // if(!nodelet_activated)
-    //     nodelet_activated = true;
-
-    // led_pose_header_previous = led_pose_header;
-    k++;
-
-} 
-
-void ledvo::LedNodelet::solve_pose_w_LED(cv::Mat& frame, cv::Mat depth)
-{   
-    
-    if(!LED_tracker_initiated_or_tracked)
-        initialization(frame, depth);
-    else
-        recursive_filtering(frame, depth);
-}
-
-void ledvo::LedNodelet::initialization(cv::Mat& frame, cv::Mat depth)
-{
-    std::vector<gtsam::Point2> pts_2d_detect = LED_extract_POI_alter(frame);
-
-    if(pts_2d_detect.size() < 4)
-    {
-        std::cout<<"LESS THAN 4"<<std::endl;
-        return;
-    }
-    
-    std::vector<gtsam::Point3> pts_3d_detect = pointcloud_generate(pts_2d_detect, depth);
-
-    if(process_landmarks(pts_2d_detect, pts_3d_detect, true))
-        LED_tracker_initiated_or_tracked = true;
-    
-    return;
-}
-
-void ledvo::LedNodelet::recursive_filtering(cv::Mat& frame, cv::Mat depth)
-{
-    std::vector<gtsam::Point2> pts_2d_detect;
-    std::cout<<"gan"<<std::endl;
-    pts_2d_detect = LED_extract_POI_alter(frame);
-}
+#include "include/ledvo.h"
 
 std::vector<gtsam::Point2> ledvo::LedNodelet::LED_extract_POI_alter(cv::Mat& frame)
 {   
@@ -170,7 +68,6 @@ std::vector<gtsam::Point2> ledvo::LedNodelet::LED_extract_POI_alter(cv::Mat& fra
 
     return pts_2d_detected;
 }
-
 
 std::vector<gtsam::Point3> ledvo::LedNodelet::pointcloud_generate(
     std::vector<gtsam::Point2>& pts_2d_detected, 
@@ -355,95 +252,7 @@ bool ledvo::LedNodelet::process_landmarks(
 
     traj_points.header.stamp = ros::Time::now();
     lm_pub.publish(traj_points);
-
-
 }
-
-Sophus::SE3d ledvo::LedNodelet::posemsg_to_SE3(const geometry_msgs::PoseStamped pose)
-{
-    return Sophus::SE3d(
-        Eigen::Quaterniond(
-            pose.pose.orientation.w,
-            pose.pose.orientation.x,
-            pose.pose.orientation.y,
-            pose.pose.orientation.z  
-        ).normalized().toRotationMatrix(),
-        Eigen::Translation3d(
-            pose.pose.position.x,
-            pose.pose.position.y,
-            pose.pose.position.z
-        ).translation()
-    );
-}
-
-geometry_msgs::PoseStamped ledvo::LedNodelet::SE3_to_posemsg(
-    const Sophus::SE3d pose_on_SE3, 
-    const std_msgs::Header msgHeader
-)
-{
-    geometry_msgs::PoseStamped returnPoseMsg;
-    returnPoseMsg.header = msgHeader;
-
-    returnPoseMsg.pose.position.x = pose_on_SE3.translation().x();
-    returnPoseMsg.pose.position.y = pose_on_SE3.translation().y();
-    returnPoseMsg.pose.position.z = pose_on_SE3.translation().z();
-
-    returnPoseMsg.pose.orientation.w = pose_on_SE3.unit_quaternion().w();
-    returnPoseMsg.pose.orientation.x = pose_on_SE3.unit_quaternion().x();
-    returnPoseMsg.pose.orientation.y = pose_on_SE3.unit_quaternion().y();
-    returnPoseMsg.pose.orientation.z = pose_on_SE3.unit_quaternion().z();
-
-    return returnPoseMsg;
-}
-
-void ledvo::LedNodelet::ugv_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
-{
-    pose_cam_inWorld_SE3 = pose_ugv_inWorld_SE3 * pose_cam_inUgvBody_SE3;
-
-    geometry_msgs::PoseStamped cam_pose_msg = SE3_to_posemsg(
-        pose_cam_inWorld_SE3, 
-        pose->header
-    );
-
-    campose_pub.publish(cam_pose_msg);
-
-    pose_ugv_inWorld_SE3 = posemsg_to_SE3(*pose); 
-    
-    ugv_pose_msg = *pose;
-    ugv_pose_msg.header.frame_id = "world";
-    ugvpose_pub.publish(ugv_pose_msg);
-}
-
-void ledvo::LedNodelet::uav_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
-{
-    pose_uav_inWorld_SE3 = posemsg_to_SE3(*pose);
-    
-    uav_pose_msg = *pose;
-    uav_pose_msg.header.frame_id = "world";
-    uavpose_pub.publish(uav_pose_msg);
-}
-
-void ledvo::LedNodelet::uav_setpt_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
-{
-    uav_stpt_msg = *pose;
-}
-
-void ledvo::LedNodelet::map_SE3_to_pose(Sophus::SE3d pose_led_inCamera_SE3)
-{   
-    pose_cam_inGeneralBodySE3 * pose_led_inCamera_SE3; //now we in body frame
-
-    pose_led_inWorld_SE3 = 
-        pose_cam_inWorld_SE3 
-        * pose_led_inUavBodyOffset_SE3 
-        * pose_cam_inGeneralBodySE3 
-        * pose_led_inCamera_SE3;
-    
-    led_pose_header.frame_id = "world";
-    led_pose_estimated_msg = SE3_to_posemsg(pose_led_inWorld_SE3, led_pose_header);
-
-    ledpose_pub.publish(led_pose_estimated_msg);
-}
-
 
 void ledvo::LedNodelet::get_correspondence(
     std::vector<Eigen::Vector2d>& pts_2d_detected
@@ -598,102 +407,6 @@ std::vector<Eigen::Vector2d> ledvo::LedNodelet::shift2D(
     return shifted_pts;
 }
 
-void ledvo::LedNodelet::solve_pnp_initial_pose(std::vector<Eigen::Vector2d> pts_2d, std::vector<Eigen::Vector3d> pts_3d)
-{
-    Eigen::Matrix3d R;
-    Eigen::Vector3d t;
-
-    cv::Mat distCoeffs = cv::Mat::zeros(5, 1, CV_64F);
-    // distCoeffs.at<double>(0) = -0.056986890733242035;
-    // distCoeffs.at<double>(1) = 0.06356718391180038;
-    // distCoeffs.at<double>(2) = -0.0012483829632401466;
-    // distCoeffs.at<double>(3) = -0.00018130485841538757;
-    // distCoeffs.at<double>(4) = -0.019809694960713387;
-
-    cv::Mat no_ro_rmat = cv::Mat::eye(3,3,CV_64F);
-    
-    cv::Vec3d rvec, tvec;
-    // cv::Rodrigues(no_ro_rmat, rvec);
-
-    cv::Mat camMat = cv::Mat::eye(3,3,CV_64F);
-    std::vector<cv::Point3f> pts_3d_;
-    std::vector<cv::Point2f> pts_2d_;
-
-    cv::Point3f temp3d;
-    cv::Point2f temp2d;
-
-    for(auto what : pts_3d)
-    {
-        temp3d.x = what(0);
-        temp3d.y = what(1);
-        temp3d.z = what(2);
-
-        pts_3d_.push_back(temp3d);
-    }
-
-    for(auto what : pts_2d)
-    {
-        temp2d.x = what(0);
-        temp2d.y = what(1);    
-
-        pts_2d_.push_back(temp2d);
-    }
-
-    camMat.at<double>(0,0) = cameraMat(0,0);
-    camMat.at<double>(0,2) = cameraMat(0,2);
-    camMat.at<double>(1,1) = cameraMat(1,1);
-    camMat.at<double>(1,2) = cameraMat(1,2);
-
-
-    // cv::solvePnP(pts_3d_, pts_2d_ ,camMat, distCoeffs, rvec, tvec, cv::SOLVEPNP_EPNP);
-
-    cv::solvePnP(pts_3d_, pts_2d_ ,camMat, distCoeffs, rvec, tvec, cv::SOLVEPNP_ITERATIVE);
-    //opt pnp algorithm
-    //, cv::SOLVEPNP_EPNP
-    //, cv::SOLVEPNP_IPPE
-    //, cv::SOLVEPNP_P3P
-
-    //return values
-    cv::Mat rmat = cv::Mat::eye(3,3,CV_64F);
-    cv::Rodrigues(rvec, rmat);
-
-    R <<
-        rmat.at<double>(0,0), rmat.at<double>(0,1), rmat.at<double>(0,2),
-        rmat.at<double>(1,0), rmat.at<double>(1,1), rmat.at<double>(1,2),
-        rmat.at<double>(2,0), rmat.at<double>(2,1), rmat.at<double>(2,2);
-
-    Eigen::Matrix3d reverse_mat;
-    reverse_mat <<
-            1.0000000,  0.0000000,  0.0000000,
-            0.0000000, -1.0000000, -0.0000000,
-            0.0000000,  0.0000000, -1.0000000;
-
-    
-
-    t =  Eigen::Vector3d(
-          tvec(0),
-          tvec(1),
-          tvec(2)  
-        );
-
-    if(tvec(2) < 0) //sometimes opencv yeilds reversed results, flip it 
-    {
-        R = R * reverse_mat;
-        t = (-1) * t;
-    }
-
-    pose_epnp_sophus = Sophus::SE3d(R, t);
-    
-    // pose_depth_sophus = Sophus::SE3d(R, t);
-
-    // if(LED_tracker_initiated_or_tracked)
-    // {
-    //     // cout<<"depth"<<endl;
-    //     t = led_3d_posi_in_camera_frame_depth;
-    //     pose_depth_sophus = Sophus::SE3d(R, t);
-    // }
-
-}
 
 /* ================ POI Extraction utilities function below ================ */
 std::vector<Eigen::Vector2d> ledvo::LedNodelet::LED_extract_POI(cv::Mat& frame, cv::Mat depth)
@@ -829,6 +542,8 @@ inline double ledvo::LedNodelet::calculate_MAD(std::vector<double> norm_of_point
     return MAD;
 }
 
+
+
 // /* ================ Outlier Rejection utilities function below ================ */
 //     /* in outlier rejection, we first calculate the MAD (mean average deviation)
 //     to see whether there exists some outlier or not.
@@ -929,155 +644,3 @@ inline double ledvo::LedNodelet::calculate_MAD(std::vector<double> norm_of_point
 //         pcl_center_point_wo_outlier_previous.z
 //     );
 // }
-
-/* ================ UI utilities function below ================ */
-
-void ledvo::LedNodelet::set_image_to_publish(double freq, const sensor_msgs::CompressedImageConstPtr & rgbmsg)
-{    
-    char hz[40];
-    char fps[10] = " fps";
-    sprintf(hz, "%.2f", freq);
-    strcat(hz, fps);
-
-    char BA[40] = "BA: ";
-    char BA_error_display[10];
-    sprintf(BA_error_display, "%.2f", BA_error);
-    strcat(BA, BA_error_display);
-
-    char depth[40] = "DPTH: ";
-    char depth_display[10];
-    sprintf(depth_display, "%.2f", depth_avg_of_all);
-    strcat(depth, depth_display);
-    
-    cv::putText(display, hz, cv::Point(20,40), cv::FONT_HERSHEY_PLAIN, 1.6, CV_RGB(255,0,0));  
-    cv::putText(display, std::to_string(detect_no), cv::Point(720,460), cv::FONT_HERSHEY_PLAIN, 1.6, CV_RGB(255,0,0));
-    cv::putText(display, BA, cv::Point(720,60), cv::FONT_HERSHEY_PLAIN, 1.6, CV_RGB(255,0,0));
-    cv::putText(display, depth, cv::Point(20,460), cv::FONT_HERSHEY_PLAIN, 1.6, CV_RGB(255,0,0));
-
-    cv::Mat imageoutput = display.clone();
-    cv_bridge::CvImage for_visual;
-    for_visual.header = rgbmsg->header;
-    for_visual.encoding = sensor_msgs::image_encodings::BGR8;
-    for_visual.image = imageoutput;
-    this->pubimage.publish(for_visual.toImageMsg());
-
-
-    cv_bridge::CvImage for_visual_input;
-    for_visual_input.header = rgbmsg->header;
-    for_visual_input.encoding = sensor_msgs::image_encodings::BGR8;
-    for_visual_input.image = frame_input;
-    this->pubimage_input.publish(for_visual_input.toImageMsg());   
-
-}
-
-void ledvo::LedNodelet::log(double ms)
-{
-    vdo::ledvo_log logdata_entry_led;
-    
-    logdata_entry_led.px = pose_led_inWorld_SE3.translation().x();
-    logdata_entry_led.py = pose_led_inWorld_SE3.translation().y();
-    logdata_entry_led.pz = pose_led_inWorld_SE3.translation().z();
-
-    logdata_entry_led.set_px = uav_stpt_msg.pose.position.x;
-    logdata_entry_led.set_py = uav_stpt_msg.pose.position.y;
-    logdata_entry_led.set_pz = uav_stpt_msg.pose.position.z;
-    
-    Eigen::Vector3d rpy = q2rpy(
-        Eigen::Quaterniond(pose_led_inWorld_SE3.rotationMatrix())
-    );
-
-    logdata_entry_led.roll  = rpy(0);
-    logdata_entry_led.pitch = rpy(1);
-    logdata_entry_led.yaw   = rpy(2);
-
-    Eigen::AngleAxisd angle_axis_led = Eigen::AngleAxisd(pose_led_inWorld_SE3.rotationMatrix());
-    logdata_entry_led.orientation = angle_axis_led.angle();
-
-    logdata_entry_led.ms = ms;
-    logdata_entry_led.depth = abs(
-        sqrt(
-            pow(
-                pose_cam_inWorld_SE3.translation().x() - pose_uav_inWorld_SE3.translation().x(),
-                2
-            ) +
-            pow(pose_cam_inWorld_SE3.translation().y() - pose_uav_inWorld_SE3.translation().y(),
-                2
-            ) +
-            pow(pose_cam_inWorld_SE3.translation().z() - pose_uav_inWorld_SE3.translation().z(),
-                2
-            )
-        )        
-    );
-
-    logdata_entry_led.header.stamp = led_pose_header.stamp;
-
-    record_led_pub.publish(logdata_entry_led);
-
-    ///////////////////////////////////////////////////////////
-
-    vdo::ledvo_log logdata_entry_uav;
-    
-    logdata_entry_uav.px = pose_uav_inWorld_SE3.translation().x();
-    logdata_entry_uav.py = pose_uav_inWorld_SE3.translation().y();
-    logdata_entry_uav.pz = pose_uav_inWorld_SE3.translation().z();
-    
-    rpy = q2rpy(
-        Eigen::Quaterniond(pose_uav_inWorld_SE3.rotationMatrix())
-    );
-
-    logdata_entry_uav.roll  = rpy(0);
-    logdata_entry_uav.pitch = rpy(1);
-    logdata_entry_uav.yaw   = rpy(2);
-
-    Eigen::AngleAxisd angle_axis_uav = Eigen::AngleAxisd(pose_uav_inWorld_SE3.rotationMatrix());
-    logdata_entry_uav.orientation = angle_axis_uav.angle();
-
-    logdata_entry_uav.header.stamp = led_pose_header.stamp;
-
-    record_uav_pub.publish(logdata_entry_uav);
-
-    // std::cout<<"orientation: "<<abs(logdata_entry_led.orientation - logdata_entry_uav.orientation)<<std::endl;
-    // std::ofstream save("/home/patty/ledvo_ws/src/ledvo/vdo/src/temp/lala.txt", std::ios::app);
-    // save<<abs(logdata_entry_led.orientation - logdata_entry_uav.orientation)<<std::endl;
-}
-
-void ledvo::LedNodelet::terminal_msg_display(double hz)
-{
-    std::string LED_terminal_display = "DETECT_no: " + std::to_string(detect_no);
-
-    std::ostringstream out1;
-    out1.precision(2);
-    out1<<std::fixed<<BA_error;
-    std::string BA_terminal_display = " || BA_ERROR: " + out1.str();
-
-    std::ostringstream out2;
-    out2.precision(2);
-    out2<<std::fixed<<depth_avg_of_all;
-    std::string depth_terminal_display = " || depth: " + out2.str();
-
-    std::ostringstream out3;
-    out3.precision(2);
-    out3<<std::fixed<<hz;
-    std::string hz_terminal_display = " || hz: " + out3.str();
-
-    std::string final_msg = LED_terminal_display 
-        + BA_terminal_display 
-        + depth_terminal_display
-        + hz_terminal_display;
-
-    std::string LED_tracker_status_display;
-
-    if(LED_tracker_initiated_or_tracked)
-    {
-        final_msg = "LED GOOD || " + final_msg;
-        ROS_GREEN_STREAM(final_msg);
-    }
-    else
-    {
-        final_msg = "LED BAD! || " + final_msg;
-        ROS_RED_STREAM(final_msg);
-        if(tracker_started)
-            error_no ++;
-    }
-    std::cout<<"fail: "<< error_no<<" / "<<total_no<<std::endl;
-}
