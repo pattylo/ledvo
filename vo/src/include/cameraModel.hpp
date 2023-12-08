@@ -26,7 +26,7 @@
 #ifndef CAMERAMODEL_HPP
 #define CAMERAMODEL_HPP
 
-#include "tools/essential.h"
+#include "essential.h"
 #include <sophus/se3.hpp>
 
 namespace vision{

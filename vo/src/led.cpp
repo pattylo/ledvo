@@ -17,7 +17,7 @@
 
 /**
  * \file led.cpp
- * \date 28/07/2022
+ * \date 08/11/2023
  * \author pattylo
  * \copyright (c) AIRO-LAB, RCUAS of Hong Kong Polytechnic University
  * \brief classes for vision-based relative localization for UAV and UGV based on LED markers
@@ -243,8 +243,6 @@ std::vector<gtsam::Point3> ledvo::LedNodelet::pointcloud_generate(
         if(z_depth == 0 || z_depth > 8.0)
             continue;
 
-        
-
         temp.x() = x_pixel;
         temp.y() = y_pixel;
         temp.z() = 1;
@@ -361,21 +359,6 @@ bool ledvo::LedNodelet::process_landmarks(
 
 }
 
-
-
-
-
-
-
-
-
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
 Sophus::SE3d ledvo::LedNodelet::posemsg_to_SE3(const geometry_msgs::PoseStamped pose)
 {
     return Sophus::SE3d(
@@ -459,83 +442,7 @@ void ledvo::LedNodelet::map_SE3_to_pose(Sophus::SE3d pose_led_inCamera_SE3)
     led_pose_estimated_msg = SE3_to_posemsg(pose_led_inWorld_SE3, led_pose_header);
 
     ledpose_pub.publish(led_pose_estimated_msg);
-
-    //odom publish
-    // led_odom_estimated.header.stamp = led_pose_header;
-    // led_odom_estimated.header.frame_id = "world";
-
-    // led_odom_estimated.pose.pose.position.x = t_final.translation().x();
-    // led_odom_estimated.pose.pose.position.y = t_final.translation().y();
-    // led_odom_estimated.pose.pose.position.z = t_final.translation().z();
-
-    // led_odom_estimated.pose.pose.orientation.w = q_final.w();
-    // led_odom_estimated.pose.pose.orientation.x = q_final.x();
-    // led_odom_estimated.pose.pose.orientation.y = q_final.y();
-    // led_odom_estimated.pose.pose.orientation.z = q_final.z();
-
-    // led_odom_estimated.twist.twist.linear.x = led_twist_current(0);
-    // led_odom_estimated.twist.twist.linear.y = led_twist_current(1);
-    // led_odom_estimated.twist.twist.linear.z = led_twist_current(2);
-
-    // led_odom_estimated.twist.twist.angular.x = led_twist_current(3);
-    // led_odom_estimated.twist.twist.angular.y = led_twist_current(4);
-    // led_odom_estimated.twist.twist.angular.z = led_twist_current(5);
-    
-    // ledodom_pub.publish(led_odom_estimated);
-
-    // Sophus::SE3d led_twist_sophus = Sophus::SE3d(led_twist_current);
-    // led_twist_estimated.twist.linear.x = led_twist_sophus.ro         
- 
 }
-
-
-
-void ledvo::LedNodelet::apiKF(int DOKF)
-{
-    switch (DOKF)
-    {
-    case kfINITIATE:
-        /* code */
-        initKF(pose_global_sophus);
-        break;
-    
-    case kfREINITIATE:
-        /* code */
-        reinitKF(pose_global_sophus);
-        break;
-
-    case kfNORMALKF:
-        /* code */
-        // Measurement Here;
-        run_AIEKF(
-            led_pose_header.stamp.toSec() - led_pose_header_previous.stamp.toSec(),
-            pts_on_body_frame_in_corres_order, 
-            pts_detected_in_corres_order
-        );
-
-        pose_global_sophus = XcurrentPosterori.X_SE3;
-        
-        BA_error = get_reprojection_error(
-            pts_on_body_frame_in_corres_order,
-            pts_detected_in_corres_order,
-            pose_global_sophus,
-            true
-        );
-
-        if(BA_error > 4 * LED_no)
-        {
-            LED_tracker_initiated_or_tracked = false;
-            cv::imwrite("/home/patty/ledvo_ws/BA" + std::to_string(BA_error) + ".jpg", frame_input);
-        }
-
-        break;
-    
-    default:
-        // pc::pattyDebug();
-        break;
-    }
-}
-
 
 
 void ledvo::LedNodelet::get_correspondence(

@@ -23,7 +23,7 @@
  * \brief executable to record data
  */
 
-#include "./include/tools/essential.h"
+#include "./include/essential.h"
 #include "./include/cameraModel.hpp"
 
 #include <mavros_msgs/AttitudeTarget.h>

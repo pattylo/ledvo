@@ -23,7 +23,7 @@
  * \brief classess to configure subscribe and publish topics
  */
 
-#include "../include/tools/RosTopicConfigs.h"
+#include "./include/RosTopicConfigs.h"
 
 RosTopicConfigs::RosTopicConfigs(ros::NodeHandle& _nh, std::string param_namespace)
 : nh(_nh)

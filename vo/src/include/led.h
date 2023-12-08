@@ -26,7 +26,7 @@
 #ifndef LED_H
 #define LED_H
 
-#include "tools/essential.h"
+#include "essential.h"
 
 #include <geometry_msgs/Point.h>
 #include <std_msgs/Bool.h>
@@ -62,13 +62,15 @@
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 
 
-#include "tools/RosTopicConfigs.h"
+#include "RosTopicConfigs.h"
 #include "visual_odometry/ledvo_log.h"
+#include "cameraModel.hpp"
 
-#include "aiekf.hpp"
 #include "cameraModel.hpp"
 
 #include <visualization_msgs/Marker.h>
+
+#include "torch/torch.h"
 
 
 // map definition for convinience
@@ -105,8 +107,9 @@ namespace ledvo
         gtsam::Point2 pt2d_previous;
     }landmark;
 
-    class LedNodelet : public nodelet::Nodelet, private kf::aiekf
+    class LedNodelet : public nodelet::Nodelet, private vision::cameraModel
     {
+            torch::Tensor tensor = torch::rand({2, 3});
         //primary objects
             //frames
             cv::Mat frame, display, hsv, frame_temp;
@@ -220,13 +223,9 @@ namespace ledvo
 
             visualization_msgs::Marker traj_points;
             
-        
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //main process & kf
-            
-            void apiKF(int DOKF);
+
                          
         
         //LED extraction tool
@@ -248,7 +247,6 @@ namespace ledvo
             std::vector<Eigen::Vector2d> LED_extract_POI(cv::Mat& frame, cv::Mat depth);
             
             
-
         // correspondence search
             //objects
             int LED_no;
@@ -272,7 +270,6 @@ namespace ledvo
                 std::vector<Eigen::Vector2d>& pts_2d_detected,
                 std::vector<Eigen::Vector2d>& pts_2d_detected_previous
             );
-            void reject_outlier(std::vector<Eigen::Vector2d>& pts_2d_detect, cv::Mat depth);
                                   
         // initialization
             //objects
@@ -390,10 +387,8 @@ namespace ledvo
                 POI_config(nh);
                 camIntrinsic_config(nh);
                 camExtrinsic_config(nh);
-                LEDExtrinsicUAV_config(nh);
                 CamInGeneralBody_config(nh);
                 LEDInBodyAndOutlierSetting_config(nh);
-                KF_config(nh);
             }
 
             inline void registerRosCommunicate(ros::NodeHandle& nh)
@@ -594,29 +589,7 @@ namespace ledvo
 
                 LED_no = pts_on_body_frame.size();
             }
-              
-            inline void KF_config(ros::NodeHandle& nh)
-            {
-                double Q_val;
-                double R_val;
 
-                nh.getParam("/ledvo_master/Q_val", Q_val);
-                nh.getParam("/ledvo_master/R_val", R_val);
-                nh.getParam("/ledvo_master/Q_alpha", QAdaptiveAlpha);
-                nh.getParam("/ledvo_master/R_beta", RAdaptiveBeta);
-                nh.getParam("/ledvo_master/kf_size", kf_size);
-                nh.getParam("/ledvo_master/kfZ_size", kfZ_size);
-                nh.getParam("/ledvo_master/OPT_MAX_ITERATION", MAX_ITERATION);
-                nh.getParam("/ledvo_master/CONVERGE_THRESHOLD", CONVERGE_THRESHOLD);
-
-                Q_init.resize(kf_size, kf_size);
-                Q_init.setIdentity();
-                Q_init = Q_init * Q_val;
-
-                R_init.resize(kfZ_size, kfZ_size);
-                R_init.setIdentity();
-                R_init = R_init * R_val;
-            }
     };
 
     PLUGINLIB_EXPORT_CLASS(ledvo::LedNodelet, nodelet::Nodelet)

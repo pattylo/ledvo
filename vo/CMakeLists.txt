@@ -85,7 +85,7 @@ include_directories(
 
 add_library(ledvo
   src/led.cpp
-  src/tools/RosTopicConfigs.cpp
+  src/RosTopicConfigs.cpp
   )
 
 # Specify libraries to link a library or executable target against
