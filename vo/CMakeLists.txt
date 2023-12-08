@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(visual_odometry)
+project(vdo)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++17)
@@ -56,7 +56,7 @@ add_message_files(
 generate_messages(DEPENDENCIES std_msgs sensor_msgs)
 
 catkin_package(
-  # INCLUDE_DIRS include
+  INCLUDE_DIRS include
 
   CATKIN_DEPENDS 
   geometry_msgs 
@@ -84,8 +84,7 @@ include_directories(
 ## Declare a C++ library
 
 add_library(ledvo
-  src/led.cpp
-  src/RosTopicConfigs.cpp
+  src/ledvo/led.cpp
   )
 
 # Specify libraries to link a library or executable target against
@@ -100,14 +99,14 @@ target_link_libraries(
 )
 add_dependencies(
   ledvo
-  visual_odometry_generate_messages_cpp
+  vdo_generate_messages_cpp
 )
 
 ############################################################################
 ## Declare C++ executables
 
 add_executable(lala
-  src/lala.cpp
+  src/lala/lala.cpp
 )
 
 target_link_libraries(lala
@@ -118,16 +117,16 @@ target_link_libraries(lala
 )
 
 add_dependencies(lala
-  visual_odometry_generate_messages_cpp
+  vdo_generate_messages_cpp
 )
 
 ############################################################################
 
-add_executable(data
-  src/data.cpp
+add_executable(datalog
+  src/datalog/datalog.cpp
 )
 
-target_link_libraries(data
+target_link_libraries(datalog
   ${catkin_LIBRARIES}
 )
 

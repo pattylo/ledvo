@@ -972,7 +972,7 @@ void ledvo::LedNodelet::set_image_to_publish(double freq, const sensor_msgs::Com
 
 void ledvo::LedNodelet::log(double ms)
 {
-    visual_odometry::ledvo_log logdata_entry_led;
+    vdo::ledvo_log logdata_entry_led;
     
     logdata_entry_led.px = pose_led_inWorld_SE3.translation().x();
     logdata_entry_led.py = pose_led_inWorld_SE3.translation().y();
@@ -1015,7 +1015,7 @@ void ledvo::LedNodelet::log(double ms)
 
     ///////////////////////////////////////////////////////////
 
-    visual_odometry::ledvo_log logdata_entry_uav;
+    vdo::ledvo_log logdata_entry_uav;
     
     logdata_entry_uav.px = pose_uav_inWorld_SE3.translation().x();
     logdata_entry_uav.py = pose_uav_inWorld_SE3.translation().y();
@@ -1037,7 +1037,7 @@ void ledvo::LedNodelet::log(double ms)
     record_uav_pub.publish(logdata_entry_uav);
 
     // std::cout<<"orientation: "<<abs(logdata_entry_led.orientation - logdata_entry_uav.orientation)<<std::endl;
-    // std::ofstream save("/home/patty/ledvo_ws/src/ledvo/visual_odometry/src/temp/lala.txt", std::ios::app);
+    // std::ofstream save("/home/patty/ledvo_ws/src/ledvo/vdo/src/temp/lala.txt", std::ios::app);
     // save<<abs(logdata_entry_led.orientation - logdata_entry_uav.orientation)<<std::endl;
 }
 

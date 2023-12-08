@@ -27,6 +27,8 @@
 #define LED_H
 
 #include "essential.h"
+#include "cameraModel.hpp"
+#include "RosTopicConfigs.hpp"
 
 #include <geometry_msgs/Point.h>
 #include <std_msgs/Bool.h>
@@ -61,12 +63,8 @@
 #include <gtsam/nonlinear/BatchFixedLagSmoother.h>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 
+#include "vdo/ledvo_log.h"
 
-#include "RosTopicConfigs.h"
-#include "visual_odometry/ledvo_log.h"
-#include "cameraModel.hpp"
-
-#include "cameraModel.hpp"
 
 #include <visualization_msgs/Marker.h>
 
@@ -150,8 +148,7 @@ namespace ledvo
             geometry_msgs::PoseStamped ugv_pose_msg, 
                                        uav_pose_msg,
                                        uav_stpt_msg;            
-           
-            
+                       
         //secondary objects
             // double temp = 0;
             int i = 0;
@@ -176,7 +173,8 @@ namespace ledvo
             void ugv_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
             void uav_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
             void uav_setpt_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
-        
+
+            void uav_ctrl_msg_callbacn(const int lala);
         //publisher 
             //objects
             ros::Publisher ledpose_pub, ledodom_pub, 
@@ -222,12 +220,9 @@ namespace ledvo
 
 
             visualization_msgs::Marker traj_points;
-            
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-                         
-        
+                
         //LED extraction tool
             //objects
             double LANDING_DISTANCE = 0;
@@ -377,8 +372,6 @@ namespace ledvo
                 traj_points.color.g=1;
                 traj_points.color.r=0;
                 traj_points.color.b=0;
-                
-
             }
 
             inline void doALOTofConfigs(ros::NodeHandle& nh)
@@ -438,11 +431,11 @@ namespace ledvo
                 //only used for validation stage
                                 (configs.getTopicName(CAM_POSE_PUB_TOPIC), 1, true);    
                 
-                record_led_pub = nh.advertise<visual_odometry::ledvo_log>
-                                ("/visual_odometry/led/led_log", 1);
+                record_led_pub = nh.advertise<vdo::ledvo_log>
+                                ("/vdo/led/led_log", 1);
                 
-                record_uav_pub = nh.advertise<visual_odometry::ledvo_log>
-                                ("/visual_odometry/led/uav_log", 1);  
+                record_uav_pub = nh.advertise<vdo::ledvo_log>
+                                ("/vdo/led/uav_log", 1);  
 
                 lm_pub = nh.advertise<visualization_msgs::Marker>("/gt_points/traj", 1, true);
 
@@ -477,9 +470,6 @@ namespace ledvo
                         std::istringstream istr(ostr.str());
                         istr >> cameraMat(i, j);
                     }
-
-                
-
             }
 
             inline void camExtrinsic_config(ros::NodeHandle& nh)

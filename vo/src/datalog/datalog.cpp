@@ -23,8 +23,8 @@
  * \brief executable to record data
  */
 
-#include "./include/essential.h"
-#include "./include/cameraModel.hpp"
+#include "essential.h"
+#include "cameraModel.hpp"
 
 #include <mavros_msgs/AttitudeTarget.h>
 #include <geometry_msgs/PoseStamped.h>
