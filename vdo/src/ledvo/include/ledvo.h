@@ -174,7 +174,7 @@ namespace ledvo
             void uav_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
             void uav_setpt_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
 
-            void uav_ctrl_msg_callbacn(const int lala);
+            void uav_ctrl_msg_callback(const int lala);
         //publisher 
             //objects
             ros::Publisher ledpose_pub, ledodom_pub, 

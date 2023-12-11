@@ -81,7 +81,7 @@ include_directories(
 )
 
 ############################################################################
-## Declare a C++ library
+## Declare a C++ ledvo nodelet library
 
 add_library(ledvo
   src/ledvo/ledvo.cpp
@@ -98,7 +98,7 @@ target_link_libraries(ledvo
   ${Sophus_INCLUDE_DIRS}
   ${TORCH_LIBRARIES}
   gtsam
-  gtsam_unstable
+  # gtsam_unstable
 )
 add_dependencies(ledvo
   vdo_generate_messages_cpp
@@ -131,11 +131,3 @@ add_executable(datalog
 target_link_libraries(datalog
   ${catkin_LIBRARIES}
 )
-
-  
-  
-
-
-
-
-
