@@ -54,16 +54,30 @@
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
+
+#include <std_msgs/Bool.h>
+
+#include <geometry_msgs/Point.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <nav_msgs/Odometry.h>
+
 #include <sensor_msgs/Imu.h>
+#include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/Image.h>
+
+#include <image_transport/image_transport.h>
+#include <cv_bridge/cv_bridge.h>
+
+#include <message_filters/subscriber.h>
+#include <message_filters/synchronizer.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/sync_policies/exact_time.h>
+
+#include <visualization_msgs/Marker.h>
 
 #include <tf/tf.h>
-
-// #include "q"
-
 
 namespace pc
 {

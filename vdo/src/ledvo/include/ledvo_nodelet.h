@@ -30,7 +30,6 @@
 #include <nodelet/nodelet.h>
 #include <memory>
 
-
 #include "ledvo_lib.h"
 
 namespace ledvo

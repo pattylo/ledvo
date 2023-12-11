@@ -16,7 +16,7 @@
 */
 
 /**
- * \file ledvo_nodelet.h
+ * \file ledvo_nodelet.cpp
  * \date 11/12/2022
  * \author pattylo
  * \copyright (c) RCUAS of Hong Kong Polytechnic University
@@ -30,4 +30,5 @@ void ledvo::LedvoNodelet::onInit()
     ros::NodeHandle& nh = getMTNodeHandle();
     ledvolib_ptr = std::make_shared<LedvoLib>(getMTNodeHandle());
     
+    return;
 }

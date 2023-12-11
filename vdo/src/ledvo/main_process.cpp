@@ -25,7 +25,7 @@
 
 #include "include/ledvo_lib.h"
 
-ledvo::LedvoLib::LedvoLib(ros::NodeHandle& nh) : _nh(nh)
+ledvo::LedvoLib::LedvoLib(ros::NodeHandle& nh)
 {
     ROS_INFO("LED Nodelet Initiated...");
 
@@ -68,9 +68,6 @@ ledvo::LedvoLib::LedvoLib(ros::NodeHandle& nh) : _nh(nh)
     // traj_points.color.b=0;
 
 }
-
-
-
 
 void ledvo::LedvoLib::camera_callback(
     const sensor_msgs::CompressedImage::ConstPtr& rgbmsg, 
@@ -179,6 +176,22 @@ geometry_msgs::PoseStamped ledvo::LedvoLib::SE3_to_posemsg(
     return returnPoseMsg;
 }
 
+void ledvo::LedvoLib::map_SE3_to_pose(Sophus::SE3d pose_led_inCamera_SE3)
+{   
+    pose_cam_inGeneralBodySE3 * pose_led_inCamera_SE3; //now we in body frame
+
+    pose_led_inWorld_SE3 = 
+        pose_cam_inWorld_SE3 
+        * pose_led_inUavBodyOffset_SE3 
+        * pose_cam_inGeneralBodySE3 
+        * pose_led_inCamera_SE3;
+    
+    led_pose_header.frame_id = "world";
+    led_pose_estimated_msg = SE3_to_posemsg(pose_led_inWorld_SE3, led_pose_header);
+
+    ledpose_pub.publish(led_pose_estimated_msg);
+}
+
 void ledvo::LedvoLib::ugv_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
 {
     pose_cam_inWorld_SE3 = pose_ugv_inWorld_SE3 * pose_cam_inUgvBody_SE3;
@@ -211,21 +224,7 @@ void ledvo::LedvoLib::uav_setpt_callback(const geometry_msgs::PoseStamped::Const
     uav_stpt_msg = *pose;
 }
 
-void ledvo::LedvoLib::map_SE3_to_pose(Sophus::SE3d pose_led_inCamera_SE3)
-{   
-    pose_cam_inGeneralBodySE3 * pose_led_inCamera_SE3; //now we in body frame
 
-    pose_led_inWorld_SE3 = 
-        pose_cam_inWorld_SE3 
-        * pose_led_inUavBodyOffset_SE3 
-        * pose_cam_inGeneralBodySE3 
-        * pose_led_inCamera_SE3;
-    
-    led_pose_header.frame_id = "world";
-    led_pose_estimated_msg = SE3_to_posemsg(pose_led_inWorld_SE3, led_pose_header);
-
-    ledpose_pub.publish(led_pose_estimated_msg);
-}
 
 void ledvo::LedvoLib::set_image_to_publish(double freq, const sensor_msgs::CompressedImageConstPtr & rgbmsg)
 {    
