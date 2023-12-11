@@ -84,7 +84,8 @@ include_directories(
 ## Declare a C++ ledvo nodelet library
 
 add_library(ledvo
-  src/ledvo/ledvo.cpp
+  src/ledvo/ledvo_nodelet.cpp
+  src/ledvo/main_process.cpp
   src/ledvo/config.cpp
   src/ledvo/landmarks.cpp
   src/ledvo/dynamics.cpp

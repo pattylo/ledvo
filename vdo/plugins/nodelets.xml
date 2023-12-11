@@ -1,6 +1,6 @@
 <library path="lib/libledvo">
-    <class name ="ledvo/LedNodelet" 
-        type="ledvo::LedNodelet"
+    <class name ="ledvo/LedvoNodelet" 
+        type="ledvo::LedvoNodelet"
         base_class_type="nodelet::Nodelet">
         <description>
             Launch nodelet here. LED it is.

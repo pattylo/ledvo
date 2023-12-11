@@ -23,58 +23,62 @@
  * \brief classes for vision-based relative localization for UAV and UGV based on LED markers
  */
 
-#include "include/ledvo.h"
+#include "include/ledvo_lib.h"
 
-void ledvo::LedNodelet::onInit()
-{                
-    ros::NodeHandle& nh = getMTNodeHandle();
+ledvo::LedvoLib::LedvoLib(ros::NodeHandle& nh) : _nh(nh)
+{
     ROS_INFO("LED Nodelet Initiated...");
 
     doALOTofConfigs(nh);
     registerRosCommunicate(nh);    
 
-    batchsmoother = std::make_unique<gtsam::BatchFixedLagSmoother>(
-        batchLag,
-        batchLMparameters
-    );
+    // batchsmoother = std::make_unique<gtsam::BatchFixedLagSmoother>(
+    //     batchLag,
+    //     batchLMparameters
+    // );
 
-    x_current = gtsam::Pose3().Identity();
-    x_current.print();
+    // x_current = gtsam::Pose3().Identity();
+    // x_current.print();
 
-    timeStart = ros::Time::now().toSec();
-    K = std::make_shared<gtsam::Cal3_S2>(
-        cameraMat(0,0),
-        cameraMat(1,1),
-        0.0,
-        cameraMat(0,2),
-        cameraMat(1,2)
-    );
+    // timeStart = ros::Time::now().toSec();
+    
+    // // K = std::make_shared<gtsam::Cal3_S2>(
+    // //     cameraMat(0,0),
+    // //     cameraMat(1,1),
+    // //     0.0,
+    // //     cameraMat(0,2),
+    // //     cameraMat(1,2)
+    // // );
 
-    std::cout<<cameraMat<<std::endl<<std::endl;;
-    std::cout<<K->K()<<std::endl;
+    // // std::cout<<cameraMat<<std::endl<<std::endl;;
+    // // std::cout<<K->K()<<std::endl;
 
-    traj_points.header.frame_id = "world";
+    // traj_points.header.frame_id = "world";
 
-    traj_points.ns = "GT_points";
+    // traj_points.ns = "GT_points";
 
-    traj_points.id = 0;
-    traj_points.action = visualization_msgs::Marker::ADD;
-    traj_points.pose.orientation.w = 1.0;
-    traj_points.type = visualization_msgs::Marker::SPHERE_LIST;
-    traj_points.scale.x = traj_points.scale.y = traj_points.scale.z = 0.02;
-    traj_points.color.a=1;
-    traj_points.color.g=1;
-    traj_points.color.r=0;
-    traj_points.color.b=0;
+    // traj_points.id = 0;
+    // traj_points.action = visualization_msgs::Marker::ADD;
+    // traj_points.pose.orientation.w = 1.0;
+    // traj_points.type = visualization_msgs::Marker::SPHERE_LIST;
+    // traj_points.scale.x = traj_points.scale.y = traj_points.scale.z = 0.02;
+    // traj_points.color.a=1;
+    // traj_points.color.g=1;
+    // traj_points.color.r=0;
+    // traj_points.color.b=0;
+
 }
 
 
 
-void ledvo::LedNodelet::camera_callback(
+
+void ledvo::LedvoLib::camera_callback(
     const sensor_msgs::CompressedImage::ConstPtr& rgbmsg, 
     const sensor_msgs::Image::ConstPtr& depthmsg
 )
 {
+    std::cout<<"hi"<<std::endl;
+
     cv_bridge::CvImageConstPtr depth_ptr;
     led_pose_header = rgbmsg->header;
 
@@ -111,7 +115,7 @@ void ledvo::LedNodelet::camera_callback(
     //     ROS_RED_STREAM("RESET TERMINAL!");
     // }           
            
-    solve_pose_w_LED(frame, depth);
+    // solve_pose_w_LED(frame, depth);
 
 
     // std::cout<<"hi?"<<std::endl;
@@ -138,7 +142,7 @@ void ledvo::LedNodelet::camera_callback(
 
 } 
 
-Sophus::SE3d ledvo::LedNodelet::posemsg_to_SE3(const geometry_msgs::PoseStamped pose)
+Sophus::SE3d ledvo::LedvoLib::posemsg_to_SE3(const geometry_msgs::PoseStamped pose)
 {
     return Sophus::SE3d(
         Eigen::Quaterniond(
@@ -155,7 +159,7 @@ Sophus::SE3d ledvo::LedNodelet::posemsg_to_SE3(const geometry_msgs::PoseStamped 
     );
 }
 
-geometry_msgs::PoseStamped ledvo::LedNodelet::SE3_to_posemsg(
+geometry_msgs::PoseStamped ledvo::LedvoLib::SE3_to_posemsg(
     const Sophus::SE3d pose_on_SE3, 
     const std_msgs::Header msgHeader
 )
@@ -175,7 +179,7 @@ geometry_msgs::PoseStamped ledvo::LedNodelet::SE3_to_posemsg(
     return returnPoseMsg;
 }
 
-void ledvo::LedNodelet::ugv_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
+void ledvo::LedvoLib::ugv_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
 {
     pose_cam_inWorld_SE3 = pose_ugv_inWorld_SE3 * pose_cam_inUgvBody_SE3;
 
@@ -193,7 +197,7 @@ void ledvo::LedNodelet::ugv_pose_callback(const geometry_msgs::PoseStamped::Cons
     ugvpose_pub.publish(ugv_pose_msg);
 }
 
-void ledvo::LedNodelet::uav_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
+void ledvo::LedvoLib::uav_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
 {
     pose_uav_inWorld_SE3 = posemsg_to_SE3(*pose);
     
@@ -202,12 +206,12 @@ void ledvo::LedNodelet::uav_pose_callback(const geometry_msgs::PoseStamped::Cons
     uavpose_pub.publish(uav_pose_msg);
 }
 
-void ledvo::LedNodelet::uav_setpt_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
+void ledvo::LedvoLib::uav_setpt_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
 {
     uav_stpt_msg = *pose;
 }
 
-void ledvo::LedNodelet::map_SE3_to_pose(Sophus::SE3d pose_led_inCamera_SE3)
+void ledvo::LedvoLib::map_SE3_to_pose(Sophus::SE3d pose_led_inCamera_SE3)
 {   
     pose_cam_inGeneralBodySE3 * pose_led_inCamera_SE3; //now we in body frame
 
@@ -223,7 +227,7 @@ void ledvo::LedNodelet::map_SE3_to_pose(Sophus::SE3d pose_led_inCamera_SE3)
     ledpose_pub.publish(led_pose_estimated_msg);
 }
 
-void ledvo::LedNodelet::set_image_to_publish(double freq, const sensor_msgs::CompressedImageConstPtr & rgbmsg)
+void ledvo::LedvoLib::set_image_to_publish(double freq, const sensor_msgs::CompressedImageConstPtr & rgbmsg)
 {    
     char hz[40];
     char fps[10] = " fps";
@@ -261,7 +265,7 @@ void ledvo::LedNodelet::set_image_to_publish(double freq, const sensor_msgs::Com
 
 }
 
-void ledvo::LedNodelet::log(double ms)
+void ledvo::LedvoLib::log(double ms)
 {
     vdo::ledvo_log logdata_entry_led;
     
@@ -332,7 +336,7 @@ void ledvo::LedNodelet::log(double ms)
     // save<<abs(logdata_entry_led.orientation - logdata_entry_uav.orientation)<<std::endl;
 }
 
-void ledvo::LedNodelet::terminal_msg_display(double hz)
+void ledvo::LedvoLib::terminal_msg_display(double hz)
 {
     std::string LED_terminal_display = "DETECT_no: " + std::to_string(detect_no);
 

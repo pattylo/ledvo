@@ -16,12 +16,33 @@
 */
 
 /**
- * \file dynamics.cpp
- * \date 08/12/2023
+ * \file ledvo_nodelet.h
+ * \date 11/12/2022
  * \author pattylo
- * \copyright (c) AIRO-LAB, RCUAS of Hong Kong Polytechnic University
+ * \copyright (c) RCUAS of Hong Kong Polytechnic University
  * \brief classes for vision-based relative localization for UAV and UGV based on LED markers
-*/
+ */
 
-#include "include/ledvo_lib.h"
+#ifndef LEDVO_NODELET_H
+#define LEDVO_NODELET_H
 
+#include <pluginlib/class_list_macros.h>
+#include <nodelet/nodelet.h>
+#include <memory>
+
+
+#include "ledvo_lib.h"
+
+namespace ledvo
+{
+    class LedvoNodelet : public nodelet::Nodelet
+    {
+        public:
+        virtual void onInit();
+        std::shared_ptr<LedvoLib> ledvolib_ptr;
+    };
+
+    PLUGINLIB_EXPORT_CLASS(ledvo::LedvoNodelet, nodelet::Nodelet)
+}
+
+#endif

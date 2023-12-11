@@ -16,12 +16,18 @@
 */
 
 /**
- * \file dynamics.cpp
- * \date 08/12/2023
+ * \file ledvo_nodelet.h
+ * \date 11/12/2022
  * \author pattylo
- * \copyright (c) AIRO-LAB, RCUAS of Hong Kong Polytechnic University
+ * \copyright (c) RCUAS of Hong Kong Polytechnic University
  * \brief classes for vision-based relative localization for UAV and UGV based on LED markers
-*/
+ */
 
-#include "include/ledvo_lib.h"
+#include "include/ledvo_nodelet.h"
 
+void ledvo::LedvoNodelet::onInit()
+{
+    ros::NodeHandle& nh = getMTNodeHandle();
+    ledvolib_ptr = std::make_shared<LedvoLib>(getMTNodeHandle());
+    
+}

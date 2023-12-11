@@ -95,7 +95,7 @@ Eigen::Vector2d vision::cameraModel::reproject_3D_2D(Eigen::Vector3d P, Sophus::
     Eigen::Matrix3d R = pose.rotationMatrix();
     Eigen::Vector3d t = pose.translation();
 
-    result = cameraMat * (R * P + t); 
+    // result = cameraMat * (R * P + t); 
 
     Eigen::Vector2d result2d;
 
@@ -190,8 +190,8 @@ void vision::cameraModel::solveJacobianCamera(Eigen::MatrixXd& Jacob, Sophus::SE
     Eigen::Matrix3d R = pose.rotationMatrix();
     Eigen::Vector3d t = pose.translation();
                 // cameraMat
-    double fx = cameraMat(0,0);
-    double fy = cameraMat(1,1);
+    double fx = 0; //cameraMat(0,0);
+    double fy = 0; //cameraMat(1,1);
 
     Eigen::Vector3d point_in_camera = R * point_3d + t;
     

@@ -23,9 +23,9 @@
  * \brief classes for vision-based relative localization for UAV and UGV based on LED markers
  */
 
-#include "include/ledvo.h"
+#include "include/ledvo_lib.h"
 
-std::vector<gtsam::Point2> ledvo::LedNodelet::LED_extract_POI_alter(cv::Mat& frame)
+std::vector<gtsam::Point2> ledvo::LedvoLib::LED_extract_POI_alter(cv::Mat& frame)
 {   
     std::vector<gtsam::Point2> pts_2d_detected;
 
@@ -69,7 +69,7 @@ std::vector<gtsam::Point2> ledvo::LedNodelet::LED_extract_POI_alter(cv::Mat& fra
     return pts_2d_detected;
 }
 
-std::vector<gtsam::Point3> ledvo::LedNodelet::pointcloud_generate(
+std::vector<gtsam::Point3> ledvo::LedvoLib::pointcloud_generate(
     std::vector<gtsam::Point2>& pts_2d_detected, 
     cv::Mat depthimage
 )
@@ -145,7 +145,7 @@ std::vector<gtsam::Point3> ledvo::LedNodelet::pointcloud_generate(
         temp.z() = 1;
 
 
-        temp = z_depth * cameraMat.inverse() * temp;
+        // temp = z_depth * cameraMat.inverse() * temp;
         
         pts_2d_detected.emplace_back(pts_2d_detected_temp[i]);
         pointclouds.emplace_back(temp);
@@ -156,7 +156,7 @@ std::vector<gtsam::Point3> ledvo::LedNodelet::pointcloud_generate(
     return pointclouds;
 }
 
-bool ledvo::LedNodelet::process_landmarks(
+bool ledvo::LedvoLib::process_landmarks(
     std::vector<gtsam::Point2> pts_2d_detect,
     std::vector<gtsam::Point3> pts_3d_detect,
     bool initialing
@@ -201,7 +201,7 @@ bool ledvo::LedNodelet::process_landmarks(
                 // pose_cam_inGeneralBodySE3.matrix() * Eigen::Vector4d(pts_3d_detect[i],1);
                 Eigen::Vector4d homo_pt_temp;
                 std::cout<<"one pt here"<<std::endl;
-                std::cout<<cameraMat<<std::endl;
+                // std::cout<<cameraMat<<std::endl;
 
                 std::cout<<pts_2d_detect[i]<<std::endl;
                 homo_pt_temp << pts_3d_detect[i], 1; 
@@ -254,7 +254,7 @@ bool ledvo::LedNodelet::process_landmarks(
     lm_pub.publish(traj_points);
 }
 
-void ledvo::LedNodelet::get_correspondence(
+void ledvo::LedvoLib::get_correspondence(
     std::vector<Eigen::Vector2d>& pts_2d_detected
 )
 {
@@ -348,7 +348,7 @@ void ledvo::LedNodelet::get_correspondence(
         
 }
 
-std::vector<Eigen::Vector2d> ledvo::LedNodelet::shift2D(
+std::vector<Eigen::Vector2d> ledvo::LedvoLib::shift2D(
     std::vector<Eigen::Vector2d>& pts_2D_previous,
     std::vector<Eigen::Vector2d>& pts_detect_current
 )
@@ -409,7 +409,7 @@ std::vector<Eigen::Vector2d> ledvo::LedNodelet::shift2D(
 
 
 /* ================ POI Extraction utilities function below ================ */
-std::vector<Eigen::Vector2d> ledvo::LedNodelet::LED_extract_POI(cv::Mat& frame, cv::Mat depth)
+std::vector<Eigen::Vector2d> ledvo::LedvoLib::LED_extract_POI(cv::Mat& frame, cv::Mat depth)
 {   
     cv::Mat depth_mask_src = depth.clone(), depth_mask_dst1, depth_mask_dst2;
 
@@ -473,7 +473,7 @@ std::vector<Eigen::Vector2d> ledvo::LedNodelet::LED_extract_POI(cv::Mat& frame, 
 
 /* ================ k-means utilities function below ================ */
 
-void ledvo::LedNodelet::correspondence_search_2D2DCompare(
+void ledvo::LedvoLib::correspondence_search_2D2DCompare(
     std::vector<Eigen::Vector2d>& pts_2d_detected,
     std::vector<Eigen::Vector2d>& pts_2d_detected_previous
 )
@@ -527,7 +527,7 @@ void ledvo::LedNodelet::correspondence_search_2D2DCompare(
     }    
 }
 
-inline double ledvo::LedNodelet::calculate_MAD(std::vector<double> norm_of_points)
+double ledvo::LedvoLib::calculate_MAD(std::vector<double> norm_of_points)
 {
     int n = norm_of_points.size();
     double mean = 0, delta_sum = 0, MAD;
@@ -556,7 +556,7 @@ inline double ledvo::LedNodelet::calculate_MAD(std::vector<double> norm_of_point
 //     center at previous time step(pcl_center_point_wo_outlier_previous)
 //     and determine which cluster is the one that we want */
 
-// void ledvo::LedNodelet::reject_outlier(std::vector<Eigen::Vector2d>& pts_2d_detect, cv::Mat depth)
+// void ledvo::LedvoLib::reject_outlier(std::vector<Eigen::Vector2d>& pts_2d_detect, cv::Mat depth)
 // {
 //     // std::vector<Eigen::Vector3d> pts_3d_detect = pointcloud_generate(pts_2d_detect, depth);
 //     //what is this for?

@@ -23,9 +23,9 @@
  * \brief classes for vision-based relative localization for UAV and UGV based on LED markers
  */
 
-#include "include/ledvo.h"
+#include "include/ledvo_lib.h"
 
-void ledvo::LedNodelet::doALOTofConfigs(ros::NodeHandle& nh)
+void ledvo::LedvoLib::doALOTofConfigs(ros::NodeHandle& nh)
 {
     POI_config(nh);
     camIntrinsic_config(nh);
@@ -34,25 +34,29 @@ void ledvo::LedNodelet::doALOTofConfigs(ros::NodeHandle& nh)
     LEDInBodyAndOutlierSetting_config(nh);
 }
 
-void ledvo::LedNodelet::registerRosCommunicate(ros::NodeHandle& nh)
+void ledvo::LedvoLib::registerRosCommunicate(ros::NodeHandle& nh)
 {
-    RosTopicConfigs configs(nh, "/led");
+    RosTopicConfigs configs(nh, "/ledvo");
+    std::cout<<"hi here in ros"<<std::endl;
 
+    
     //subscribe                
     subimage.subscribe(nh, configs.getTopicName(COLOR_SUB_TOPIC), 1);                
+    std::cout<<configs.getTopicName(COLOR_SUB_TOPIC)<<std::endl;
+
     subdepth.subscribe(nh, configs.getTopicName(DEPTH_SUB_TOPIC), 1);                
     sync_.reset(new sync( MySyncPolicy(10), subimage, subdepth));            
-    sync_->registerCallback(boost::bind(&LedNodelet::camera_callback, this, _1, _2));                                
+    sync_->registerCallback(boost::bind(&LedvoLib::camera_callback, this, _1, _2));                                
 
     uav_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
     //only used for validation stage
-        (configs.getTopicName(UAV_POSE_SUB_TOPIC), 1, &LedNodelet::uav_pose_callback, this);
+        (configs.getTopicName(UAV_POSE_SUB_TOPIC), 1, &LedvoLib::uav_pose_callback, this);
 
     ugv_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
-        (configs.getTopicName(UGV_POSE_SUB_TOPIC), 1, &LedNodelet::ugv_pose_callback, this);
+        (configs.getTopicName(UGV_POSE_SUB_TOPIC), 1, &LedvoLib::ugv_pose_callback, this);
 
     uav_setpt_sub = nh.subscribe<geometry_msgs::PoseStamped>
-        ("/planner_server/traj/pose", 1, &LedNodelet::uav_setpt_callback, this);
+        ("/planner_server/traj/pose", 1, &LedvoLib::uav_setpt_callback, this);
     
     //publish
     image_transport::ImageTransport image_transport_(nh);
@@ -90,7 +94,7 @@ void ledvo::LedNodelet::registerRosCommunicate(ros::NodeHandle& nh)
     lm_pub = nh.advertise<visualization_msgs::Marker>("/gt_points/traj", 1, true);
 }
 
-void ledvo::LedNodelet::POI_config(ros::NodeHandle &nh)
+void ledvo::LedvoLib::POI_config(ros::NodeHandle &nh)
 {
     // load POI_extract config
     nh.getParam("/ledvo_master/LANDING_DISTANCE", LANDING_DISTANCE);     
@@ -104,7 +108,7 @@ void ledvo::LedNodelet::POI_config(ros::NodeHandle &nh)
     // nh.getParam("/ledvo_master/UAV_POSE_TOPIC", UAV_POSE_TOPIC);
 }
 
-void ledvo::LedNodelet::camIntrinsic_config(ros::NodeHandle& nh)
+void ledvo::LedvoLib::camIntrinsic_config(ros::NodeHandle& nh)
 {
     // load camera intrinsics
     XmlRpc::XmlRpcValue intrinsics_list;
@@ -113,14 +117,16 @@ void ledvo::LedNodelet::camIntrinsic_config(ros::NodeHandle& nh)
     for(int i = 0; i < 3; i++)
         for(int j = 0; j < 3; j++)
         {
-            std::ostringstream ostr;
-            ostr << intrinsics_list[3 * i+ j];
-            std::istringstream istr(ostr.str());
-            istr >> cameraMat(i, j);
+            // std::ostringstream ostr;
+            // ostr << intrinsics_list[3 * i+ j];
+            // std::istringstream istr(ostr.str());
+            // istr >> cameraMat(i, j);
         }
+    
+    // std::cout<<cameraMat<<std::endl;
 }
 
-void ledvo::LedNodelet::camExtrinsic_config(ros::NodeHandle& nh)
+void ledvo::LedvoLib::camExtrinsic_config(ros::NodeHandle& nh)
 {
     cameraEX.resize(6);
     XmlRpc::XmlRpcValue extrinsics_list;
@@ -148,7 +154,7 @@ void ledvo::LedNodelet::camExtrinsic_config(ros::NodeHandle& nh)
     );
 }
 
-void ledvo::LedNodelet::LEDExtrinsicUAV_config(ros::NodeHandle& nh)
+void ledvo::LedvoLib::LEDExtrinsicUAV_config(ros::NodeHandle& nh)
 {
     // load LED extrinsics
     LEDEX.resize(6);
@@ -171,7 +177,7 @@ void ledvo::LedNodelet::LEDExtrinsicUAV_config(ros::NodeHandle& nh)
     );
 }
 
-void ledvo::LedNodelet::CamInGeneralBody_config(ros::NodeHandle& nh)
+void ledvo::LedvoLib::CamInGeneralBody_config(ros::NodeHandle& nh)
 {
     // load cam in general body frame                
     Eigen::Matrix3d cam_to_body_rot;
@@ -186,7 +192,7 @@ void ledvo::LedNodelet::CamInGeneralBody_config(ros::NodeHandle& nh)
     );
 }
 
-void ledvo::LedNodelet::LEDInBodyAndOutlierSetting_config(ros::NodeHandle& nh)
+void ledvo::LedvoLib::LEDInBodyAndOutlierSetting_config(ros::NodeHandle& nh)
 {
     //load LED potisions in body frame
     XmlRpc::XmlRpcValue LED_list;
@@ -217,13 +223,6 @@ void ledvo::LedNodelet::LEDInBodyAndOutlierSetting_config(ros::NodeHandle& nh)
     nh.getParam("/ledvo_master/MAD_dilate", MAD_dilate);
     nh.getParam("/ledvo_master/MAD_max", MAD_max);
 
-    MAD_x_threshold = (calculate_MAD(norm_of_x_points) * MAD_dilate > MAD_max ? MAD_max : calculate_MAD(norm_of_x_points) * MAD_dilate);
-    MAD_y_threshold = (calculate_MAD(norm_of_y_points) * MAD_dilate > MAD_max ? MAD_max : calculate_MAD(norm_of_y_points) * MAD_dilate);
-    MAD_z_threshold = (calculate_MAD(norm_of_z_points) * MAD_dilate > MAD_max ? MAD_max : calculate_MAD(norm_of_z_points) * MAD_dilate);
-
-    // std::cout<<MAD_x_threshold<<std::endl;
-    // std::cout<<MAD_y_threshold<<std::endl;
-    // std::cout<<MAD_z_threshold<<std::endl;
 
     LED_no = pts_on_body_frame.size();
 }

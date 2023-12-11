@@ -105,8 +105,15 @@ namespace ledvo
         gtsam::Point2 pt2d_previous;
     }landmark;
 
-    class LedNodelet : public nodelet::Nodelet, private vision::cameraModel
+    class LedvoLib : public vision::cameraModel
     {
+        public:
+        LedvoLib(ros::NodeHandle& nh);
+        ~LedvoLib(){}
+
+        private:
+            ros::NodeHandle _nh;
+
             torch::Tensor tensor = torch::rand({2, 3});
         //primary objects
             //frames
@@ -308,13 +315,10 @@ namespace ledvo
             void terminal_msg_display(double hz);
             void log(double ms);    
             
-            inline Sophus::SE3d posemsg_to_SE3(const geometry_msgs::PoseStamped pose);
-            inline geometry_msgs::PoseStamped SE3_to_posemsg(const Sophus::SE3d pose_on_SE3, const std_msgs::Header msgHeader);
+            Sophus::SE3d posemsg_to_SE3(const geometry_msgs::PoseStamped pose);
+            geometry_msgs::PoseStamped SE3_to_posemsg(const Sophus::SE3d pose_on_SE3, const std_msgs::Header msgHeader);
             
             Eigen::VectorXd led_twist_current;    
-
-//---------------------------------------------------------------------------------------
-            virtual void onInit();
             
             // configs.cpp
             void doALOTofConfigs(ros::NodeHandle& nh);
@@ -327,8 +331,6 @@ namespace ledvo
             void CamInGeneralBody_config(ros::NodeHandle& nh);            
             void LEDInBodyAndOutlierSetting_config(ros::NodeHandle& nh);
     };
-
-    PLUGINLIB_EXPORT_CLASS(ledvo::LedNodelet, nodelet::Nodelet)
 }
 
 #endif

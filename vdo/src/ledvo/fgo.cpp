@@ -23,9 +23,9 @@
  * \brief classes for vision-based relative localization for UAV and UGV based on LED markers
  */
 
-#include "include/ledvo.h"
+#include "include/ledvo_lib.h"
 
-double ledvo::LedNodelet::get_reprojection_error(
+double ledvo::LedvoLib::get_reprojection_error(
     std::vector<Eigen::Vector3d> pts_3d, 
     std::vector<Eigen::Vector2d> pts_2d, 
     Sophus::SE3d pose, 
@@ -52,7 +52,7 @@ double ledvo::LedNodelet::get_reprojection_error(
 
 
 
-void ledvo::LedNodelet::solve_pose_w_LED(cv::Mat& frame, cv::Mat depth)
+void ledvo::LedvoLib::solve_pose_w_LED(cv::Mat& frame, cv::Mat depth)
 {   
     
     if(!LED_tracker_initiated_or_tracked)
@@ -61,7 +61,7 @@ void ledvo::LedNodelet::solve_pose_w_LED(cv::Mat& frame, cv::Mat depth)
         recursive_filtering(frame, depth);
 }
 
-void ledvo::LedNodelet::initialization(cv::Mat& frame, cv::Mat depth)
+void ledvo::LedvoLib::initialization(cv::Mat& frame, cv::Mat depth)
 {
     std::vector<gtsam::Point2> pts_2d_detect = LED_extract_POI_alter(frame);
 
@@ -80,7 +80,7 @@ void ledvo::LedNodelet::initialization(cv::Mat& frame, cv::Mat depth)
 }
 
 
-void ledvo::LedNodelet::recursive_filtering(cv::Mat& frame, cv::Mat depth)
+void ledvo::LedvoLib::recursive_filtering(cv::Mat& frame, cv::Mat depth)
 {
     std::vector<gtsam::Point2> pts_2d_detect;
     std::cout<<"gan"<<std::endl;
@@ -88,7 +88,7 @@ void ledvo::LedNodelet::recursive_filtering(cv::Mat& frame, cv::Mat depth)
 }
 
 
-void ledvo::LedNodelet::solve_pnp_initial_pose(std::vector<Eigen::Vector2d> pts_2d, std::vector<Eigen::Vector3d> pts_3d)
+void ledvo::LedvoLib::solve_pnp_initial_pose(std::vector<Eigen::Vector2d> pts_2d, std::vector<Eigen::Vector3d> pts_3d)
 {
     Eigen::Matrix3d R;
     Eigen::Vector3d t;
@@ -129,10 +129,10 @@ void ledvo::LedNodelet::solve_pnp_initial_pose(std::vector<Eigen::Vector2d> pts_
         pts_2d_.push_back(temp2d);
     }
 
-    camMat.at<double>(0,0) = cameraMat(0,0);
-    camMat.at<double>(0,2) = cameraMat(0,2);
-    camMat.at<double>(1,1) = cameraMat(1,1);
-    camMat.at<double>(1,2) = cameraMat(1,2);
+    // camMat.at<double>(0,0) = cameraMat(0,0);
+    // camMat.at<double>(0,2) = cameraMat(0,2);
+    // camMat.at<double>(1,1) = cameraMat(1,1);
+    // camMat.at<double>(1,2) = cameraMat(1,2);
 
 
     // cv::solvePnP(pts_3d_, pts_2d_ ,camMat, distCoeffs, rvec, tvec, cv::SOLVEPNP_EPNP);
