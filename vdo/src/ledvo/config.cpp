@@ -64,6 +64,9 @@ void ledvo::LedvoLib::registerRosCommunicate(ros::NodeHandle& nh)
     uav_ctrlmsg_sub = nh.subscribe<mavros_msgs::AttitudeTarget>
         ("/mavros/setpoint_raw/attitude", 1, &LedvoLib::uav_ctrl_msg_callback, this);
     
+    cal_msg_sub = nh.subscribe<std_msgs::Bool>
+        ("/calculate", 1, &LedvoLib::calculate_msg_callback, this);
+    
     //publish
     image_transport::ImageTransport image_transport_(nh);
 
@@ -96,6 +99,7 @@ void ledvo::LedvoLib::registerRosCommunicate(ros::NodeHandle& nh)
     
     record_uav_pub = nh.advertise<vdo::ledvo_log>
                     ("/vdo/led/uav_log", 1);  
+    
 
     lm_pub = nh.advertise<visualization_msgs::Marker>("/gt_points/traj", 1, true);
 }
@@ -235,6 +239,12 @@ void ledvo::LedvoLib::LEDInBodyAndOutlierSetting_config(ros::NodeHandle& nh)
 
 void ledvo::LedvoLib::GTSAM_config()
 {
+    starting_time = ros::Time::now().toSec();
+
+    batchLMparameters.absoluteErrorTol = 1e-4;
+    batchLMparameters.verbosity = gtsam::NonlinearOptimizerParams::SILENT;
+    batchLMparameters.verbosityLM = gtsam::LevenbergMarquardtParams::SILENT;
+
     batchsmoother = std::make_unique<gtsam::BatchFixedLagSmoother>(
         batchLag,
         batchLMparameters
@@ -256,6 +266,10 @@ void ledvo::LedvoLib::GTSAM_config()
     std::cout<<cameraMat<<std::endl<<std::endl;;
     std::cout<<K->K()<<std::endl;
 
+}
+
+void ledvo::LedvoLib::VIZ_config()
+{
     traj_points.header.frame_id = "world";
 
     traj_points.ns = "GT_points";

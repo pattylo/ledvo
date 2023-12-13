@@ -52,11 +52,6 @@ std::vector<gtsam::Point2> ledvo::LedvoLib::LED_extract_POI_alter(cv::Mat& frame
 
 	cv::drawKeypoints(frame, keypoints_rgb_d, im_with_keypoints,CV_RGB(255,0,0), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
     
-    
-    // std::cout<<im_with_keypoints.type()<<std::endl;
-    cv::imshow("test", im_with_keypoints);
-    cv::waitKey(4);
-
     gtsam::Point2 temp;
     for(auto& what : keypoints_rgb_d)
     {
@@ -158,65 +153,95 @@ std::vector<gtsam::Point3> ledvo::LedvoLib::pointcloud_generate(
 
 bool ledvo::LedvoLib::process_landmarks(
     std::vector<gtsam::Point2> pts_2d_detect,
-    std::vector<gtsam::Point3> pts_3d_detect,
+    cv::Mat& depth,
     bool initialing
 )
 {
-    if(pts_2d_detect.size() != pts_3d_detect.size())
-        pc::pattyDebug("DETECTION SIZES DO NOT MATCH...");
+    std::vector<Eigen::Vector3d> pts_3d_detect = gen_pointcloud(pts_2d_detect, depth);
 
-    raw_landmarks_pub(pts_3d_detect);// just for visualization purpose
-
-    if(initialing)
+    if(firstFrame)
     {
-        using namespace gtsam; 
+        // no need correspondences search, just initialize
+        std::cout<<"gan size here: "<<pts_2d_detect.size()<<std::endl;
+        initial_no = pts_2d_detect.size();
 
-        traj_points.points.clear();
-
-        landmark temp;
-        if(firstFrame)
+        landmark lm_temp;
+        for(int i = 0; i < pts_2d_detect.size(); i++)
         {
-            // no need correspondences search, just initialize
-            std::cout<<"size here: "<<pts_2d_detect.size()<<std::endl;
+            lm_temp.tracked_id_no = i;
+            
+            lm_temp.pt3d = pts_3d_detect[i];
+            lm_temp.pt2d = pts_2d_detect[i];
+            lm_temp.pt2d_previous = pts_2d_detect[i];
 
+            lm_temp.tracking = true;
 
-            firstFrame = false;
+            lm_dict.emplace_back(lm_temp);
         }
-        else
-        {
-            // require correspondences search
-        }
+
+        firstFrame = false;
+        initializer_counter++;
+
+        raw_landmarks_pub(pts_3d_detect);// just for visualization purpose
+        cout<<"end first frame"<<endl;
     }
     else
     {
+        std::cout<<"size here: "<<pts_2d_detect.size()<<std::endl;
+        std::cout<<"kaoakakakas"<<std::endl;
+        vector<Eigen::Vector3d> pts_3d_detect_temp;
+        // require correspondences search
+        for(int i = 0; i < lm_dict.size(); i++)
+        {
+            double delta_max = INFINITY;
+            Eigen::Vector3d pts_3d_temp;
 
-        
+            for(int j = 0; j < pts_2d_detect.size(); j++)
+            {
+                double delta_temp = (lm_dict[i].pt2d - pts_2d_detect[j]).norm();
+                pts_3d_temp = lm_dict[i].pt3d;
 
+                if(delta_temp < delta_max)
+                {
+                    lm_dict[i].pt2d = pts_2d_detect[j];
+                    pts_3d_temp = landmark_ir_alpha * pts_3d_temp + (1 - landmark_ir_alpha) * pts_3d_detect[j];
+
+                    delta_max = delta_temp;
+                }
+
+            }
+
+            lm_dict[i].pt3d = pts_3d_temp;
+            pts_3d_detect_temp.emplace_back(pts_3d_temp);
+
+        }
+
+        raw_landmarks_pub(pts_3d_detect_temp);// just for visualization purpose
+
+        initializer_counter++;
     }
 
-    traj_points.header.stamp = ros::Time::now();
-
-    cout<<traj_points.points.size()<<std::endl;
-    lm_pub.publish(traj_points);
+    if(initializer_counter >= 10)
+        return true;
+    else
+        return false;
 }
 
 void ledvo::LedvoLib::raw_landmarks_pub(std::vector<gtsam::Point3> pts_3d_detect)
 {
+    traj_points.points.clear();
+    cout<<"raw land pub"<<endl;
+
     geometry_msgs::Point posi_temp;
 
     for(int i = 0; i < pts_3d_detect.size(); i++)
     {
-        Eigen::Vector4d homo_pt_temp;
-        homo_pt_temp << pts_3d_detect[i], 1; 
-
-        homo_pt_temp =  pose_uav_inWorld_SE3.matrix() * pose_cam_inGeneralBodySE3.matrix() * homo_pt_temp;
-        
-        posi_temp.x = homo_pt_temp(0);
-        posi_temp.y = homo_pt_temp(1);
-        posi_temp.z = homo_pt_temp(2);
+        // cout<<i<<endl;
+        posi_temp.x = pts_3d_detect[i].x();
+        posi_temp.y = pts_3d_detect[i].y();
+        posi_temp.z = pts_3d_detect[i].z();
         
         traj_points.points.push_back(posi_temp);
-
     }
 
     posi_temp.x = pose_uav_inWorld_SE3.translation().x();
@@ -225,8 +250,116 @@ void ledvo::LedvoLib::raw_landmarks_pub(std::vector<gtsam::Point3> pts_3d_detect
 
     traj_points.points.push_back(posi_temp);
 
+    traj_points.header.stamp = ros::Time::now();
+    lm_pub.publish(traj_points);
 }
 
+std::vector<Eigen::Vector3d> ledvo::LedvoLib::gen_pointcloud(
+    std::vector<gtsam::Point2> pts_2d_detected, 
+    cv::Mat& depthimage
+)
+{
+    std::vector<gtsam::Point2> pts_2d_detected_temp = pts_2d_detected;
+
+    std::vector<gtsam::Point3> pts_3d_detected;
+    Eigen::Vector4d pts_3d_temp_homo;
+
+    pts_2d_detected.clear();
+
+    //get 9 pixels around the point of interest
+    int no_pixels = 9;
+    int POI_width = (sqrt(9) - 1 ) / 2;
+
+    std::vector<gtsam::Point3> pointclouds;
+
+    int x_pixel, y_pixel;
+    gtsam::Point3 temp;
+
+    depth_avg_of_all = 0;
+
+    for(int i = 0; i < pts_2d_detected_temp.size(); i++)
+    {
+
+        x_pixel = pts_2d_detected[i].x();
+        y_pixel = pts_2d_detected[i].y();
+        
+        cv::Point depthbox_vertice1 = cv::Point(x_pixel - POI_width, y_pixel - POI_width);
+        cv::Point depthbox_vertice2 = cv::Point(x_pixel + POI_width, y_pixel + POI_width);
+        cv::Rect letsgetdepth(depthbox_vertice1, depthbox_vertice2);
+
+        if(
+            depthbox_vertice1.x < 1 || 
+            depthbox_vertice1.y < 1 ||
+            depthbox_vertice1.x > depthimage.cols ||
+            depthbox_vertice1.y > depthimage.rows ||
+
+            depthbox_vertice2.x < 1 ||
+            depthbox_vertice2.y < 1 ||
+            depthbox_vertice2.x > depthimage.cols ||
+            depthbox_vertice2.y > depthimage.rows 
+        )
+        {
+            continue;
+        }
+            
+
+        cv::Mat ROI(depthimage, letsgetdepth);
+        cv::Mat ROIframe;
+        ROI.copyTo(ROIframe);
+        std::vector<cv::Point> nonzeros;
+
+        cv::findNonZero(ROIframe, nonzeros);
+        std::vector<double> nonzerosvalue;
+        for(auto temp : nonzeros)
+        {
+            double depth = ROIframe.at<ushort>(temp);
+            nonzerosvalue.push_back(depth);
+        }
+
+        double depth_average = 0;
+        if(nonzerosvalue.size() != 0)
+            depth_average = accumulate(nonzerosvalue.begin(), nonzerosvalue.end(),0.0)/nonzerosvalue.size();
+        double z_depth = 0.001 * depth_average;
+
+        z_depth = depthimage.at<ushort>(cv::Point(x_pixel, y_pixel)) * 0.001 - 0.14;
+        
+
+        if(z_depth == 0 || z_depth > 8.0)
+            continue;
+
+        ////////////
+        Eigen::Vector3d pt_in_image_frame;
+        pt_in_image_frame << 
+            z_depth * x_pixel,
+            z_depth * y_pixel,
+            z_depth;
+
+        Eigen::Vector4d homo_pt_temp;
+        homo_pt_temp << cameraMat.inverse() * pt_in_image_frame, 1;
+        ////// pass
+
+        pts_3d_temp_homo = pose_cam_inWorld_SE3.matrix() * homo_pt_temp;
+
+        pts_3d_detected.emplace_back(pts_3d_temp_homo.head(3));
+
+    }
+
+    return pts_3d_detected;
+}
+
+
+void ledvo::LedvoLib::set_correspondence_alter(
+    std::vector<Eigen::Vector2d>& pts_2d_detected
+)
+{
+    for(int i = 0; i < lm_dict.size(); i++)
+    {
+
+
+
+    }
+
+}
 
 void ledvo::LedvoLib::get_correspondence(
     std::vector<Eigen::Vector2d>& pts_2d_detected

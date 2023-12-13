@@ -36,7 +36,6 @@ void ledvo::LedvoLib::solve_pose_w_LED(cv::Mat& frame, cv::Mat depth)
     else
     {
         recursive_filtering(frame, depth);
-        cout<<"filter here"<<endl;
     }
         
 }
@@ -47,24 +46,341 @@ void ledvo::LedvoLib::initialization(cv::Mat& frame, cv::Mat depth)
 
     if(pts_2d_detect.size() < 4)
     {
-        std::cout<<"LESS THAN 4"<<std::endl;
+        ROS_RED_STREAM("LESS THAN 4!!!!");
         return;
     }
-    
-    std::vector<gtsam::Point3> pts_3d_detect = pointcloud_generate(pts_2d_detect, depth);
 
-    if(process_landmarks(pts_2d_detect, pts_3d_detect, true))
+    if(process_landmarks(pts_2d_detect, depth, true))
+    {
         LED_tracker_initiated_or_tracked = true;
-
+        ROS_CYAN_STREAM("INITIALIZED!");
+        key_frame_manager(true);
+    }
 }
-
 
 void ledvo::LedvoLib::recursive_filtering(cv::Mat& frame, cv::Mat depth)
 {
     std::vector<gtsam::Point2> pts_2d_detect;
-    std::cout<<"gan"<<std::endl;
+
     pts_2d_detect = LED_extract_POI_alter(frame);
+    set_correspondence_alter(pts_2d_detect);
+    key_frame_manager(false);
+
+
+    cv::imshow("test", im_with_keypoints);
+    cv::waitKey(4);
 }
+
+void ledvo::LedvoLib::key_frame_manager(
+    bool initializing
+)
+{
+    using namespace gtsam;
+
+    if(initializing)
+    // at initialization
+    {
+        for(int i = 0; i < lm_dict.size(); i++)
+        {
+            add_visual_factor_wrapper(
+                Symbol('x', keyframe_k),
+                Pose3(pose_cam_inWorld_SE3.matrix()),
+                lm_dict[i].pt2d,
+                noiseModel::Isotropic::Sigma(2, 0.01),
+
+                Symbol('l', i),
+                lm_dict[i].pt3d
+            );
+            add_prior_factor_wrapper(
+                Symbol('l', i),
+                lm_dict[i].pt3d,
+                noiseModel::Isotropic::Sigma(3, 0.1)
+            );
+        }
+
+        add_prior_factor_wrapper(
+            Symbol('x', keyframe_k),
+            Pose3(pose_cam_inWorld_SE3.matrix()),
+            noiseModel::Diagonal::Sigmas(
+                (
+                    Vector(6) << 
+                        Vector3::Constant(0.3),Vector3::Constant(0.1)
+                ).finished()
+            )
+        );
+
+        return;
+    }
+
+    if(!select_keyframe())
+        return;
+
+    for(int i = 0; i < lm_dict.size(); i++)
+    {
+        if(lm_dict[i].tracking)
+            continue;
+
+        add_visual_factor_wrapper(
+            Symbol('x', keyframe_k),
+            Pose3(pose_cam_inWorld_SE3.matrix()),
+            lm_dict[i].pt2d,
+            noiseModel::Isotropic::Sigma(2, 0.01),
+
+            Symbol('l', i),
+            lm_dict[i].pt3d
+        );
+    }
+
+    // // cout<<newValues.size
+    // FixedLagSmoother::Result lala = batchsmoother->update(
+    //     newFactors,
+    //     newValues,
+    //     newTimestamps
+    // );
+    cout<<keyframe_k<<endl;
+
+    keyframe_k++;
+}
+
+bool ledvo::LedvoLib::select_keyframe()
+{
+    Eigen::Vector2d reproject;
+    Sophus::SE3d pose_reproject = Sophus::SE3d(pose_cam_inWorld_SE3.inverse());
+
+    std::vector<cv::Point> contour_temp;
+
+    for(int i = 0; i < lm_dict.size(); i++)
+    {
+        reproject = reproject_3D_2D(lm_dict[i].pt3d, pose_reproject);
+        cv::circle(im_with_keypoints, cv::Point(reproject(0), reproject(1)), 2.5, CV_RGB(0,255,0),-1);
+        
+        contour_temp.emplace_back(cv::Point(reproject(0), reproject(1)));
+    }
+
+    contour_current.clear();
+    contour_current.emplace_back(contour_temp);
+
+    std::vector< std::vector<cv::Point>> hull(contour_current.size());
+    cv::convexHull(contour_current[0], hull[0]);
+    
+    contour_current = hull;
+
+    if(!key_first_generate)
+    {
+        ROS_YELLOW_STREAM("FIRST KEY FRAME!");
+        contour_previous = contour_current;
+
+        key_first_generate = true;
+        key_frame_last_request = ros::Time::now().toSec();
+
+        // add_factor_wrapper();
+
+        return true;
+    }
+
+    // Create binary masks for each contour
+    cv::Mat mask_current = cv::Mat::zeros(frame.size(), CV_8UC1);
+    cv::Mat mask_previous = cv::Mat::zeros(frame.size(), CV_8UC1);
+
+    cv::drawContours(mask_current, contour_current, -1, cv::Scalar(255), cv::FILLED);
+    // cv::drawContours(im_with_keypoints, contour_current, 0, CV_RGB(0,255,0), cv::FILLED);
+
+    cv::drawContours(mask_previous, contour_previous, -1, cv::Scalar(255), cv::FILLED);
+    // cv::drawContours(im_with_keypoints, contour_previous, 0, cv::Scalar(255), cv::FILLED);
+
+    // Calculate the overlapping area
+    cv::Mat overlappingArea;
+    cv::bitwise_and(mask_current, mask_previous, overlappingArea);
+
+    double overlappingAreaValue = cv::countNonZero(overlappingArea);
+    double previous_area = cv::contourArea(contour_previous[0]);
+
+    double overlappingRate = overlappingAreaValue / previous_area;
+
+    if (
+        overlappingRate < 0.64 || 
+        ros::Time::now().toSec() - key_frame_last_request > ros::Duration(2.0).toSec()
+    )
+    {
+        contour_previous = contour_current;
+        ROS_YELLOW_STREAM("NEW KEY FRAME!");
+        key_frame_last_request = ros::Time::now().toSec();
+
+        if(overlappingRate < 0.64)
+        {
+            ROS_RED_STREAM("KF becos of OVERLAPPING RATE!");
+        }
+
+        return true;
+    }
+    else 
+        return false;
+
+    // cout<<overlappingAreaValue / previous_area * 100 << " %\n"<<endl;
+}
+
+
+void ledvo::LedvoLib::add_prior_factor_wrapper(
+    gtsam::Symbol factor_id,
+    gtsam::Pose3 pose,
+    gtsam::noiseModel::Diagonal::shared_ptr poseNoise
+)
+{
+    // noiseModel::Diagonal::shared_ptr poseNoise = noiseModel::Diagonal::Sigmas((Vector(6) << Vector3::Constant(0.3),Vector3::Constant(0.1)).finished()); 
+    // 30cm std on x,y,z 0.1 rad on roll,pitch,yaw
+    
+    newFactors.addPrior(factor_id, pose, poseNoise);
+    // newValues.insert(Symbol('x', 0), poses[0].compose(Pose3(Rot3::Rodrigues(-0.1, 0.2, 0.25), Point3(0.05, -0.10, 0.20))));
+    newTimestamps[factor_id] = ros::Time::now().toSec() - starting_time;
+
+}
+
+void ledvo::LedvoLib::add_prior_factor_wrapper(
+    gtsam::Symbol factor_id,
+    gtsam::Point3 point,
+    gtsam::noiseModel::Isotropic::shared_ptr pointNoise
+)
+{
+    // noiseModel::Isotropic::shared_ptr pointNoise = noiseModel::Isotropic::Sigma(3, 0.1);
+    newFactors.addPrior(factor_id, point, pointNoise);
+    // newValues.insert<Point3>(Symbol('l',0), points[0] + Point3(-0.25, 0.20, 0.15));
+    newTimestamps[factor_id] = ros::Time::now().toSec() - starting_time;0.0;
+}
+
+void ledvo::LedvoLib::add_visual_factor_wrapper(
+    gtsam::Symbol node_pose_id,
+    gtsam::Pose3 node_pose,
+    gtsam::Point2 pt_2d_measured,
+    gtsam::noiseModel::Isotropic::shared_ptr measurementNoise,
+
+    gtsam::Symbol node_lm_id,
+    gtsam::Point3 node_lm_point
+)
+{
+    using namespace gtsam;
+    PinholeCamera<Cal3_S2> camera(node_pose, *K);
+    // this will be the points that
+
+    newFactors.push_back(
+        GenericProjectionFactor<Pose3, Point3, Cal3_S2>(
+            pt_2d_measured, 
+            measurementNoise, 
+            node_pose_id, 
+            node_lm_id, 
+            K
+        )
+    );
+
+    if(!newValues.exists(node_pose_id))
+    {
+        newValues.insert(
+            node_pose_id, //Symbol('x', k), 
+            node_pose
+        );
+    }
+
+    if(!landmarkValues.exists(node_lm_id))
+    {
+        landmarkValues.insert<Point3>(
+            node_lm_id,
+            node_lm_point
+        );
+
+        newValues.insert<Point3>(
+            node_lm_id,
+            node_lm_point
+        );
+    }
+
+    newTimestamps[node_pose_id] = ros::Time::now().toSec() - starting_time;
+    newTimestamps[node_lm_id] = ros::Time::now().toSec() - starting_time;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 void ledvo::LedvoLib::solve_pnp_initial_pose(std::vector<Eigen::Vector2d> pts_2d, std::vector<Eigen::Vector3d> pts_3d)
@@ -164,6 +480,8 @@ void ledvo::LedvoLib::solve_pnp_initial_pose(std::vector<Eigen::Vector2d> pts_2d
 
 }
 
+
+
 double ledvo::LedvoLib::get_reprojection_error(
     std::vector<Eigen::Vector3d> pts_3d, 
     std::vector<Eigen::Vector2d> pts_2d, 
@@ -187,6 +505,4 @@ double ledvo::LedvoLib::get_reprojection_error(
     }
 
     return e;
-};      
-
-
+};

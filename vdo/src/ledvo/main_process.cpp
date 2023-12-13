@@ -78,8 +78,9 @@ void ledvo::LedvoLib::camera_callback(
     //     printf("\033c");
     //     ROS_RED_STREAM("RESET TERMINAL!");
     // }           
-           
-    solve_pose_w_LED(frame, depth);
+
+    if(keyframe_k < 100) 
+        solve_pose_w_LED(frame, depth);
 
 
     
@@ -101,7 +102,6 @@ void ledvo::LedvoLib::camera_callback(
     //     nodelet_activated = true;
 
     // led_pose_header_previous = led_pose_header;
-    k++;
 
 } 
 
@@ -179,10 +179,22 @@ void ledvo::LedvoLib::ugv_pose_callback(const geometry_msgs::PoseStamped::ConstP
 void ledvo::LedvoLib::uav_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
 {
     pose_uav_inWorld_SE3 = posemsg_to_SE3(*pose);
+
+    pose_cam_inWorld_SE3 = Sophus::SE3d(
+        pose_uav_inWorld_SE3.matrix() * pose_cam_inGeneralBodySE3.matrix()
+    );
     
     uav_pose_msg = *pose;
     uav_pose_msg.header.frame_id = "world";
     uavpose_pub.publish(uav_pose_msg);
+
+
+    geometry_msgs::PoseStamped cam_pose_msg = SE3_to_posemsg(
+        pose_cam_inWorld_SE3, 
+        pose->header
+    );
+
+    campose_pub.publish(cam_pose_msg);    
 }
 
 void ledvo::LedvoLib::uav_setpt_callback(const geometry_msgs::PoseStamped::ConstPtr& pose)
@@ -190,6 +202,16 @@ void ledvo::LedvoLib::uav_setpt_callback(const geometry_msgs::PoseStamped::Const
     uav_stpt_msg = *pose;
 }
 
+void ledvo::LedvoLib::calculate_msg_callback(const std_msgs::Bool::ConstPtr& msg)
+{
+    ROS_RED_STREAM("CALCULATE!");
+
+    gtsam::FixedLagSmoother::Result lala = batchsmoother->update(
+        newFactors,
+        newValues,
+        newTimestamps
+    );
+}
 
 
 void ledvo::LedvoLib::set_image_to_publish(double freq, const sensor_msgs::CompressedImageConstPtr & rgbmsg)

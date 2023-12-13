@@ -95,7 +95,7 @@ Eigen::Vector2d vision::cameraModel::reproject_3D_2D(Eigen::Vector3d P, Sophus::
     Eigen::Matrix3d R = pose.rotationMatrix();
     Eigen::Vector3d t = pose.translation();
 
-    // result = cameraMat * (R * P + t); 
+    result = cameraMat * (R * P + t); 
 
     Eigen::Vector2d result2d;
 

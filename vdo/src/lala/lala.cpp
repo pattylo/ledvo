@@ -398,7 +398,9 @@ int main(int argc, char **argv)
 
         if(k == 0)
         {
-            noiseModel::Diagonal::shared_ptr poseNoise = noiseModel::Diagonal::Sigmas((Vector(6) << Vector3::Constant(0.3),Vector3::Constant(0.1)).finished()); // 30cm std on x,y,z 0.1 rad on roll,pitch,yaw
+            noiseModel::Diagonal::shared_ptr poseNoise = noiseModel::Diagonal::Sigmas((Vector(6) << Vector3::Constant(0.3),Vector3::Constant(0.1)).finished()); 
+            // 30cm std on x,y,z 0.1 rad on roll,pitch,yaw
+            
             newFactors.addPrior(Symbol('x', 0), poses[0], poseNoise);
             // newValues.insert(Symbol('x', 0), poses[0].compose(Pose3(Rot3::Rodrigues(-0.1, 0.2, 0.25), Point3(0.05, -0.10, 0.20))));
             newTimestamps[Symbol('x', 0)] = 0.0;

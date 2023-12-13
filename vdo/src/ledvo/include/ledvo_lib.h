@@ -86,9 +86,10 @@ namespace ledvo
     typedef struct landmark
     {
         int tracked_id_no = 0;
-        bool tracking = false;
         gtsam::Point3 pt3d;
+        gtsam::Point2 pt2d;
         gtsam::Point2 pt2d_previous;
+        bool tracking = false;
     }landmark;
 
     class LedvoLib : public vision::cameraModel
@@ -110,7 +111,8 @@ namespace ledvo
         void ugv_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
         void uav_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
         void uav_setpt_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
-        void uav_ctrl_msg_callback(const mavros_msgs::AttitudeTarget::ConstPtr &msg);
+        void uav_ctrl_msg_callback(const mavros_msgs::AttitudeTarget::ConstPtr& msg);
+        void calculate_msg_callback(const std_msgs::Bool::ConstPtr& msg);
 
         void set_image_to_publish(
                 double hz, 
@@ -131,6 +133,7 @@ namespace ledvo
         void CamInGeneralBody_config(ros::NodeHandle& nh);            
         void LEDInBodyAndOutlierSetting_config(ros::NodeHandle& nh);
         void GTSAM_config();
+        void VIZ_config();
 
 // dynamics.cpp //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -151,6 +154,31 @@ namespace ledvo
             std::vector<Eigen::Vector3d> body_frame_pts
         );
 
+        void key_frame_manager(bool initializing);
+        bool select_keyframe();
+
+        void add_prior_factor_wrapper(
+            gtsam::Symbol factor_id,
+            gtsam::Pose3 pose,
+            gtsam::noiseModel::Diagonal::shared_ptr poseNoise
+        );
+
+        void add_prior_factor_wrapper(
+            gtsam::Symbol factor_id,
+            gtsam::Point3 point,
+            gtsam::noiseModel::Isotropic::shared_ptr pointNoise
+        );
+
+        void add_visual_factor_wrapper(
+            gtsam::Symbol node_pose_id,
+            gtsam::Pose3 node_pose,
+            gtsam::Point2 pt_2d_measured,
+            gtsam::noiseModel::Isotropic::shared_ptr measurementNoise,
+
+            gtsam::Symbol node_lm_id,
+            gtsam::Point3 node_lm_point
+        );
+
 // landmarks.cpp //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         std::vector<gtsam::Point2> LED_extract_POI_alter(cv::Mat& frame);
@@ -160,14 +188,20 @@ namespace ledvo
         );
         bool process_landmarks(
             std::vector<gtsam::Point2> pts_2d_detect,
-            std::vector<gtsam::Point3> pts_3d_detect,
+            cv::Mat& depth,
             bool initialing
         );
         void raw_landmarks_pub(std::vector<gtsam::Point3> pts_3d_detect);
 
         std::vector<Eigen::Vector2d> LED_extract_POI(cv::Mat& frame, cv::Mat depth);
+
+        std::vector<Eigen::Vector3d> gen_pointcloud(std::vector<gtsam::Point2> pts_2d_detected, cv::Mat& depth);
+
             
         void get_correspondence(
+            std::vector<Eigen::Vector2d>& pts_2d_detected
+        );
+        void set_correspondence_alter(
             std::vector<Eigen::Vector2d>& pts_2d_detected
         );
         std::vector<Eigen::Vector2d> shift2D(
@@ -246,7 +280,8 @@ namespace ledvo
         ros::Subscriber ugv_pose_sub, uav_pose_sub;
         ros::Subscriber uav_setpt_sub;
         ros::Subscriber uav_ctrlmsg_sub;
-        
+        ros::Subscriber cal_msg_sub;
+
     //publisher 
         ros::Publisher ledpose_pub, ledodom_pub, 
                         campose_pub, ugvpose_pub, uavpose_pub,
@@ -262,7 +297,7 @@ namespace ledvo
         gtsam::Values landmarkValues;
         gtsam::FixedLagSmoother::KeyTimestampMap newTimestamps;
     
-        double batchLag = 4.0;
+        double batchLag = INFINITY;
         // gtsam::BatchFixedLagSmoother batchsmoother(batchLag, batchLMparameters);
         std::unique_ptr<gtsam::BatchFixedLagSmoother> batchsmoother;
 
@@ -275,8 +310,8 @@ namespace ledvo
         double timeStart;
         gtsam::Cal3_S2::shared_ptr K;
 
-        int k = 0; // for x
-        int m = 0; // for lm
+        // int k = 0; // for x
+        // int m = 0; // for lm
 
         visualization_msgs::Marker traj_points;
             
@@ -320,6 +355,19 @@ namespace ledvo
         bool firstFrame = true;
         double landmark_ir_alpha = 0.5;
         std::vector<landmark> lm_dict;
+        int initial_no = 0;
+        int time_k = 0;
+
+        std::vector<std::vector<cv::Point>> contour_previous;
+        std::vector<std::vector<cv::Point>> contour_current;
+
+        bool key_first_generate = false;
+        double key_frame_last_request;
+        int keyframe_k = 0;
+
+        double starting_time;
+
+
     };
 }
 

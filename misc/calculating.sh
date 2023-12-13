@@ -1,0 +1,1 @@
+rostopic pub /calculate std_msgs/Bool "data: true"
