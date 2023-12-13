@@ -61,11 +61,27 @@ void ledvo::LedvoLib::initialization(cv::Mat& frame, cv::Mat depth)
 void ledvo::LedvoLib::recursive_filtering(cv::Mat& frame, cv::Mat depth)
 {
     std::vector<gtsam::Point2> pts_2d_detect;
+    std::vector<gtsam::Point2> pts_2d_reproject;
 
     pts_2d_detect = LED_extract_POI_alter(frame);
-    set_correspondence_alter(pts_2d_detect);
-    key_frame_manager(false);
 
+    // check which lm is tracked here
+    // and set true false
+    set_correspondence_alter(pts_2d_detect);
+
+    // int detect_no = pts_2d_detect.size();
+    
+
+    
+    
+    // if(detect_no != tracking_no)
+    // {
+    //     cout<<"detect_no: "<<detect_no<<endl;
+    //     cout<<"tracki_no: "<<tracking_no<<endl;
+    //     ROS_RED_STREAM("CODE NOT WORKING!");
+    // }
+        
+    key_frame_manager(false);
 
     cv::imshow("test", im_with_keypoints);
     cv::waitKey(4);
@@ -82,6 +98,7 @@ void ledvo::LedvoLib::key_frame_manager(
     {
         for(int i = 0; i < lm_dict.size(); i++)
         {
+            cout<<"initial here here here here!!!!!!!!!!!!"<<endl;
             add_visual_factor_wrapper(
                 Symbol('x', keyframe_k),
                 Pose3(pose_cam_inWorld_SE3.matrix()),
@@ -115,10 +132,20 @@ void ledvo::LedvoLib::key_frame_manager(
     if(!select_keyframe())
         return;
 
+    int tracking_no = 0;
+    for(auto what : lm_dict)
+        if (what.tracking)
+            tracking_no++;
+
+    cout<<"TRACKING: "<<tracking_no<<endl;
+    cout<<Symbol('x', keyframe_k)<<endl;
+
     for(int i = 0; i < lm_dict.size(); i++)
     {
-        if(lm_dict[i].tracking)
+        if(!lm_dict[i].tracking)
             continue;
+
+        // gtsam::
 
         add_visual_factor_wrapper(
             Symbol('x', keyframe_k),
@@ -131,13 +158,19 @@ void ledvo::LedvoLib::key_frame_manager(
         );
     }
 
-    // // cout<<newValues.size
     // FixedLagSmoother::Result lala = batchsmoother->update(
     //     newFactors,
     //     newValues,
     //     newTimestamps
     // );
-    cout<<keyframe_k<<endl;
+
+    // lala.print();
+    // newFactors.resize(0);
+    // newValues.clear();
+    // newTimestamps.clear();
+
+    // cout<<"Current factor size: "<<batchsmoother->getFactors().size()<<endl<<endl;
+    cout<<"Current factor size: "<<newFactors.size()<<endl<<endl;
 
     keyframe_k++;
 }
@@ -152,8 +185,6 @@ bool ledvo::LedvoLib::select_keyframe()
     for(int i = 0; i < lm_dict.size(); i++)
     {
         reproject = reproject_3D_2D(lm_dict[i].pt3d, pose_reproject);
-        cv::circle(im_with_keypoints, cv::Point(reproject(0), reproject(1)), 2.5, CV_RGB(0,255,0),-1);
-        
         contour_temp.emplace_back(cv::Point(reproject(0), reproject(1)));
     }
 
@@ -198,7 +229,8 @@ bool ledvo::LedvoLib::select_keyframe()
     double overlappingRate = overlappingAreaValue / previous_area;
 
     if (
-        overlappingRate < 0.64 || 
+        overlappingRate < 0.64 
+        || 
         ros::Time::now().toSec() - key_frame_last_request > ros::Duration(2.0).toSec()
     )
     {
@@ -261,6 +293,13 @@ void ledvo::LedvoLib::add_visual_factor_wrapper(
     PinholeCamera<Cal3_S2> camera(node_pose, *K);
     // this will be the points that
 
+    // cout<<"from measured: "<<pt_2d_measured<<endl<<endl;
+    // cout<<"from reprojec: "<<camera.project(node_lm_point)<<endl<<endl;
+
+    // cout<<"error here: "<<(pt_2d_measured - camera.project(node_lm_point)).norm()<<endl<<endl;
+
+    // cout<<endl<<endl;
+
     newFactors.push_back(
         GenericProjectionFactor<Pose3, Point3, Cal3_S2>(
             pt_2d_measured, 
@@ -281,6 +320,7 @@ void ledvo::LedvoLib::add_visual_factor_wrapper(
 
     if(!landmarkValues.exists(node_lm_id))
     {
+        cout<<"should not be adding most of the time"<<endl;
         landmarkValues.insert<Point3>(
             node_lm_id,
             node_lm_point

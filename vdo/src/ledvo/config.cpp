@@ -241,14 +241,20 @@ void ledvo::LedvoLib::GTSAM_config()
 {
     starting_time = ros::Time::now().toSec();
 
-    batchLMparameters.absoluteErrorTol = 1e-4;
-    batchLMparameters.verbosity = gtsam::NonlinearOptimizerParams::SILENT;
-    batchLMparameters.verbosityLM = gtsam::LevenbergMarquardtParams::SILENT;
+    batchLMparameters.absoluteErrorTol = 1e-9;
+    batchLMparameters.relativeErrorTol = 1e-8;
+    batchLMparameters.verbosity = gtsam::NonlinearOptimizerParams::ERROR;
+    batchLMparameters.verbosityLM = gtsam::LevenbergMarquardtParams::SUMMARY;
+    // batchLMparameters.maxIterations = 500;
+
+    // LMparameters.verbosity = gtsam::NonlinearOptimizerParams::ERROR;
+    // LMparameters.verbosityLM = gtsam::LevenbergMarquardtParams::SUMMARY;
 
     batchsmoother = std::make_unique<gtsam::BatchFixedLagSmoother>(
         batchLag,
         batchLMparameters
     );
+    cout<<batchsmoother->smootherLag()<<endl;
 
     x_current = gtsam::Pose3().Identity();
     x_current.print();

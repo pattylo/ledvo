@@ -165,6 +165,15 @@ bool ledvo::LedvoLib::process_landmarks(
         std::cout<<"gan size here: "<<pts_2d_detect.size()<<std::endl;
         initial_no = pts_2d_detect.size();
 
+        //temp
+        gtsam::PinholeCamera<gtsam::Cal3_S2> camera(
+            gtsam::Pose3(
+                pose_cam_inWorld_SE3.matrix()
+            ), 
+            *K
+        );
+        
+
         landmark lm_temp;
         for(int i = 0; i < pts_2d_detect.size(); i++)
         {
@@ -172,7 +181,10 @@ bool ledvo::LedvoLib::process_landmarks(
             
             lm_temp.pt3d = pts_3d_detect[i];
             lm_temp.pt2d = pts_2d_detect[i];
-            lm_temp.pt2d_previous = pts_2d_detect[i];
+
+            // cout<<"error here: "<<(lm_temp.pt2d - camera.project(lm_temp.pt3d)).norm()<<endl<<endl;
+
+            lm_temp.pt2d_reproject = pts_2d_detect[i];
 
             lm_temp.tracking = true;
 
@@ -187,31 +199,33 @@ bool ledvo::LedvoLib::process_landmarks(
     }
     else
     {
-        std::cout<<"size here: "<<pts_2d_detect.size()<<std::endl;
-        std::cout<<"kaoakakakas"<<std::endl;
         vector<Eigen::Vector3d> pts_3d_detect_temp;
+        
         // require correspondences search
         for(int i = 0; i < lm_dict.size(); i++)
         {
             double delta_max = INFINITY;
+            Eigen::Vector2d pts_2d_temp;
             Eigen::Vector3d pts_3d_temp;
 
-            for(int j = 0; j < pts_2d_detect.size(); j++)
-            {
-                double delta_temp = (lm_dict[i].pt2d - pts_2d_detect[j]).norm();
-                pts_3d_temp = lm_dict[i].pt3d;
 
+            for(int j = 0; j < pts_2d_detect.size(); j++)
+            {   
+                double delta_temp = (lm_dict[i].pt2d - pts_2d_detect[j]).norm();
+                
                 if(delta_temp < delta_max)
                 {
-                    lm_dict[i].pt2d = pts_2d_detect[j];
-                    pts_3d_temp = landmark_ir_alpha * pts_3d_temp + (1 - landmark_ir_alpha) * pts_3d_detect[j];
+                    pts_2d_temp = pts_2d_detect[j];
+                    pts_3d_temp = pts_3d_detect[j];
+                    
 
                     delta_max = delta_temp;
                 }
-
             }
 
-            lm_dict[i].pt3d = pts_3d_temp;
+            // cout<<delta_max<<endl;
+            lm_dict[i].pt2d = pts_2d_temp;
+            lm_dict[i].pt3d = (1 - landmark_ir_alpha) * pts_3d_temp + landmark_ir_alpha * lm_dict[i].pt3d;
             pts_3d_detect_temp.emplace_back(pts_3d_temp);
 
         }
@@ -323,7 +337,6 @@ std::vector<Eigen::Vector3d> ledvo::LedvoLib::gen_pointcloud(
 
         z_depth = depthimage.at<ushort>(cv::Point(x_pixel, y_pixel)) * 0.001 - 0.14;
         
-
         if(z_depth == 0 || z_depth > 8.0)
             continue;
 
@@ -352,13 +365,96 @@ void ledvo::LedvoLib::set_correspondence_alter(
     std::vector<Eigen::Vector2d>& pts_2d_detected
 )
 {
+    std::vector<Eigen::Vector2d> pts_2d_reproject = 
+        gen_reproject_pts(
+            lm_dict, 
+            Sophus::SE3d(pose_cam_inWorld_SE3.inverse())
+        );
+    
     for(int i = 0; i < lm_dict.size(); i++)
     {
+        lm_dict[i].tracking = false;
+        
+        double delta_max = INFINITY;
+        Eigen::Vector2d pts_2d_temp;
 
+        for(int j = 0; j < pts_2d_detected.size(); j++)
+        {
+            double delta_temp = (pts_2d_reproject[i] - pts_2d_detected[j]).norm();
+            
+            if(delta_temp < delta_max)
+            {
+                lm_dict[i].pt2d = pts_2d_detected[j];
+                lm_dict[i].tracking = true;
+                delta_max = delta_temp;
+            }
+        }
 
+        for(int k = 0; k < pts_2d_reproject.size(); k++)
+        {
+            double delta_temp = (lm_dict[i].pt2d - pts_2d_reproject[k]).norm();
+            if(delta_temp < delta_max)
+            {
+                // cout<<"here haha"<<endl;
+                // cout<<i<<endl;
+                lm_dict[i].pt2d = pts_2d_reproject[i];
+                lm_dict[i].tracking = false;
 
+                break;
+            }
+        }
+
+        // cout<<pts_2d_reproject[i]<<endl<<endl;
+        cv::circle(
+            im_with_keypoints, 
+            cv::Point(pts_2d_reproject[i].x(), pts_2d_reproject[i].y()), 
+            2.5, 
+            CV_RGB(0,255,0),
+            -1
+        );
+
+        // check whether it is detected here
+        // modify lm_dict[i]_tracking
+        
+        // modify lm_dict[i].pt2d
     }
 
+    // cout<<"####################"<<endl<<endl;
+
+}
+
+std::vector<Eigen::Vector2d> ledvo::LedvoLib::gen_reproject_pts(
+    std::vector<Eigen::Vector3d> pts_3d_pcl,
+    Sophus::SE3d pose
+)
+{
+    std::vector<Eigen::Vector2d> reproject_pts;
+    Eigen::Vector2d reproject;
+
+    for(int i = 0; i < pts_3d_pcl.size(); i++)
+    {
+        reproject = reproject_3D_2D(pts_3d_pcl[i], pose);
+        reproject_pts.emplace_back(reproject);
+    }
+
+    return reproject_pts;
+}
+
+std::vector<Eigen::Vector2d> ledvo::LedvoLib::gen_reproject_pts(
+    std::vector<landmark> lm_dict,
+    Sophus::SE3d pose
+)
+{
+    std::vector<Eigen::Vector2d> reproject_pts;
+    Eigen::Vector2d reproject;
+
+    for(int i = 0; i < lm_dict.size(); i++)
+    {
+        reproject = reproject_3D_2D(lm_dict[i].pt3d, pose);
+        reproject_pts.emplace_back(reproject);
+    }
+
+    return reproject_pts;
 }
 
 void ledvo::LedvoLib::get_correspondence(

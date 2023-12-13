@@ -79,8 +79,8 @@ void ledvo::LedvoLib::camera_callback(
     //     ROS_RED_STREAM("RESET TERMINAL!");
     // }           
 
-    if(keyframe_k < 100) 
-        solve_pose_w_LED(frame, depth);
+    // if(keyframe_k < 100) 
+    solve_pose_w_LED(frame, depth);
 
 
     
@@ -206,11 +206,26 @@ void ledvo::LedvoLib::calculate_msg_callback(const std_msgs::Bool::ConstPtr& msg
 {
     ROS_RED_STREAM("CALCULATE!");
 
+    // newFactors.print();
+    // newValues.print();
+
     gtsam::FixedLagSmoother::Result lala = batchsmoother->update(
         newFactors,
         newValues,
         newTimestamps
     );
+
+    lala.print();
+    batchsmoother->calculateEstimate().print();
+    // batchsmoother->optimize().print();
+    // batchsmoother->
+    // batchsmoother->getFactors().print();
+    // batchsmoother->
+
+    // std::cout<<"current batch size: "<<batchsmoother->calculateEstimate()<<std::endl;
+
+    // lala.ge
+    ROS_YELLOW_STREAM("IT IS ALL YELLOW!");
 }
 
 

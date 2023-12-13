@@ -88,7 +88,7 @@ namespace ledvo
         int tracked_id_no = 0;
         gtsam::Point3 pt3d;
         gtsam::Point2 pt2d;
-        gtsam::Point2 pt2d_previous;
+        gtsam::Point2 pt2d_reproject;
         bool tracking = false;
     }landmark;
 
@@ -197,11 +197,21 @@ namespace ledvo
 
         std::vector<Eigen::Vector3d> gen_pointcloud(std::vector<gtsam::Point2> pts_2d_detected, cv::Mat& depth);
 
-            
-        void get_correspondence(
+        std::vector<Eigen::Vector2d> gen_reproject_pts(
+            std::vector<Eigen::Vector3d> pts_3d_pcl,
+            Sophus::SE3d pose
+        );
+
+        std::vector<Eigen::Vector2d> gen_reproject_pts(
+            std::vector<landmark> lm_dict,
+            Sophus::SE3d pose
+        );
+
+        void set_correspondence_alter(
             std::vector<Eigen::Vector2d>& pts_2d_detected
         );
-        void set_correspondence_alter(
+
+        void get_correspondence(
             std::vector<Eigen::Vector2d>& pts_2d_detected
         );
         std::vector<Eigen::Vector2d> shift2D(

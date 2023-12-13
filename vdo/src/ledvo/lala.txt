@@ -1,0 +1,152 @@
+NonlinearFactorGraph: size: 20
+
+Factor 0: GenericProjectionFactor, z = [
+	758.626;
+	407.402
+]
+  keys = { x0 l0 }
+isotropic dim=2 sigma=0.01
+
+Factor 1: PriorFactor on l0
+  prior mean: [
+	3.06837;
+	0.0973886;
+	-0.174331
+]
+isotropic dim=3 sigma=0.1
+
+Factor 2: GenericProjectionFactor, z = [
+	758.626;
+	407.402
+]
+  keys = { x0 l1 }
+isotropic dim=2 sigma=0.01
+
+Factor 3: PriorFactor on l1
+  prior mean: [
+	2.9223;
+	-0.969849;
+	0.19195
+]
+isotropic dim=3 sigma=0.1
+
+Factor 4: GenericProjectionFactor, z = [
+	1026.36;
+	333.182
+]
+  keys = { x0 l2 }
+isotropic dim=2 sigma=0.01
+
+Factor 5: PriorFactor on l2
+  prior mean: [
+	3.58129;
+	-1.86123;
+	0.306869
+]
+isotropic dim=3 sigma=0.1
+
+Factor 6: GenericProjectionFactor, z = [
+	758.626;
+	407.402
+]
+  keys = { x0 l3 }
+isotropic dim=2 sigma=0.01
+
+Factor 7: PriorFactor on l3
+  prior mean: [
+	5.02779;
+	-0.189521;
+	0.386612
+]
+isotropic dim=3 sigma=0.1
+
+Factor 8: GenericProjectionFactor, z = [
+	758.626;
+	407.402
+]
+  keys = { x0 l4 }
+isotropic dim=2 sigma=0.01
+
+Factor 9: PriorFactor on l4
+  prior mean: [
+	4.04167;
+	0.959893;
+	0.35601
+]
+isotropic dim=3 sigma=0.1
+
+Factor 10: GenericProjectionFactor, z = [
+	1026.36;
+	333.182
+]
+  keys = { x0 l5 }
+isotropic dim=2 sigma=0.01
+
+Factor 11: PriorFactor on l5
+  prior mean: [
+	5.19129;
+	-1.92939;
+	0.971131
+]
+isotropic dim=3 sigma=0.1
+
+Factor 12: GenericProjectionFactor, z = [
+	1026.36;
+	333.182
+]
+  keys = { x0 l6 }
+isotropic dim=2 sigma=0.01
+
+Factor 13: PriorFactor on l6
+  prior mean: [
+	4.64076;
+	2.38495;
+	1.35254
+]
+isotropic dim=3 sigma=0.1
+
+Factor 14: GenericProjectionFactor, z = [
+	1026.36;
+	333.182
+]
+  keys = { x0 l7 }
+isotropic dim=2 sigma=0.01
+
+Factor 15: PriorFactor on l7
+  prior mean: [
+	3.46053;
+	2.36661;
+	1.09616
+]
+isotropic dim=3 sigma=0.1
+
+Factor 16: PriorFactor on x0
+  prior mean:  R: [
+	-0.0144714, -0.0146836, 0.999787;
+	-0.999882, -0.00490571, -0.0145448;
+	0.00511824, -0.99988, -0.0146109
+]
+t: -0.73176 0.896095  0.10749
+  noise model: diagonal sigmas [0.3; 0.3; 0.3; 0.1; 0.1; 0.1];
+
+Factor 17: GenericProjectionFactor, z = [
+	1290.00188;
+	623.596885
+]
+  keys = { x4 l1 }
+isotropic dim=2 sigma=0.01
+
+Factor 18: GenericProjectionFactor, z = [
+	1325.78619;
+	541.182588
+]
+  keys = { x4 l2 }
+isotropic dim=2 sigma=0.01
+
+Factor 19: GenericProjectionFactor, z = [
+	7.12139224;
+	291.096805
+]
+  keys = { x9 l7 }
+isotropic dim=2 sigma=0.01
+
