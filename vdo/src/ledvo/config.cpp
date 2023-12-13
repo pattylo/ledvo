@@ -32,6 +32,9 @@ void ledvo::LedvoLib::doALOTofConfigs(ros::NodeHandle& nh)
     camExtrinsic_config(nh);
     CamInGeneralBody_config(nh);
     LEDInBodyAndOutlierSetting_config(nh);
+    GTSAM_config();
+
+    registerRosCommunicate(nh); 
 }
 
 void ledvo::LedvoLib::registerRosCommunicate(ros::NodeHandle& nh)
@@ -57,6 +60,9 @@ void ledvo::LedvoLib::registerRosCommunicate(ros::NodeHandle& nh)
 
     uav_setpt_sub = nh.subscribe<geometry_msgs::PoseStamped>
         ("/planner_server/traj/pose", 1, &LedvoLib::uav_setpt_callback, this);
+
+    uav_ctrlmsg_sub = nh.subscribe<mavros_msgs::AttitudeTarget>
+        ("/mavros/setpoint_raw/attitude", 1, &LedvoLib::uav_ctrl_msg_callback, this);
     
     //publish
     image_transport::ImageTransport image_transport_(nh);
@@ -117,13 +123,13 @@ void ledvo::LedvoLib::camIntrinsic_config(ros::NodeHandle& nh)
     for(int i = 0; i < 3; i++)
         for(int j = 0; j < 3; j++)
         {
-            // std::ostringstream ostr;
-            // ostr << intrinsics_list[3 * i+ j];
-            // std::istringstream istr(ostr.str());
-            // istr >> cameraMat(i, j);
+            std::ostringstream ostr;
+            ostr << intrinsics_list[3 * i+ j];
+            std::istringstream istr(ostr.str());
+            istr >> cameraMat(i, j);
         }
     
-    // std::cout<<cameraMat<<std::endl;
+    std::cout<<cameraMat<<std::endl;    
 }
 
 void ledvo::LedvoLib::camExtrinsic_config(ros::NodeHandle& nh)
@@ -225,4 +231,43 @@ void ledvo::LedvoLib::LEDInBodyAndOutlierSetting_config(ros::NodeHandle& nh)
 
 
     LED_no = pts_on_body_frame.size();
+}
+
+void ledvo::LedvoLib::GTSAM_config()
+{
+    batchsmoother = std::make_unique<gtsam::BatchFixedLagSmoother>(
+        batchLag,
+        batchLMparameters
+    );
+
+    x_current = gtsam::Pose3().Identity();
+    x_current.print();
+
+    timeStart = ros::Time::now().toSec();
+    
+    K = std::make_shared<gtsam::Cal3_S2>(
+        cameraMat(0,0),
+        cameraMat(1,1),
+        0.0,
+        cameraMat(0,2),
+        cameraMat(1,2)
+    );
+
+    std::cout<<cameraMat<<std::endl<<std::endl;;
+    std::cout<<K->K()<<std::endl;
+
+    traj_points.header.frame_id = "world";
+
+    traj_points.ns = "GT_points";
+
+    traj_points.id = 0;
+    traj_points.action = visualization_msgs::Marker::ADD;
+    traj_points.pose.orientation.w = 1.0;
+    traj_points.type = visualization_msgs::Marker::SPHERE_LIST;
+    traj_points.scale.x = traj_points.scale.y = traj_points.scale.z = 0.2;
+    traj_points.color.a=1;
+    traj_points.color.g=1;
+    traj_points.color.r=0;
+    traj_points.color.b=0;
+
 }

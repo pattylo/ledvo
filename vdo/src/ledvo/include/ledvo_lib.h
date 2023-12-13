@@ -53,7 +53,7 @@
 #include "vdo/ledvo_log.h"
 
 
-#include "torch/torch.h"
+// #include "torch/torch.h"
 
 // map definition for convinience
 #define COLOR_SUB_TOPIC CAMERA_SUB_TOPIC_A
@@ -67,6 +67,8 @@
 #define CAM_POSE_PUB_TOPIC POSE_PUB_TOPIC_D
 
 #define LED_ODOM_PUB_TOPIC ODOM_PUB_TOPIC_A
+
+using namespace std;
 
 namespace correspondence
 {
@@ -83,22 +85,22 @@ namespace ledvo
 {
     typedef struct landmark
     {
+        int tracked_id_no = 0;
         bool tracking = false;
-        int tracked_no = 0;
         gtsam::Point3 pt3d;
         gtsam::Point2 pt2d_previous;
     }landmark;
 
     class LedvoLib : public vision::cameraModel
     {
-        public:
+    public:
 
 // main_process.cpp //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         LedvoLib(ros::NodeHandle& nh);
         ~LedvoLib(){}
 
-        private:
+    private:
         // main_process.cpp (cont'd)
         void camera_callback(const sensor_msgs::CompressedImage::ConstPtr & rgbimage, const sensor_msgs::Image::ConstPtr & depth);
         Sophus::SE3d posemsg_to_SE3(const geometry_msgs::PoseStamped pose);
@@ -108,7 +110,7 @@ namespace ledvo
         void ugv_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
         void uav_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
         void uav_setpt_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
-        void uav_ctrl_msg_callback(const int lala);
+        void uav_ctrl_msg_callback(const mavros_msgs::AttitudeTarget::ConstPtr &msg);
 
         void set_image_to_publish(
                 double hz, 
@@ -128,6 +130,7 @@ namespace ledvo
         void LEDExtrinsicUAV_config(ros::NodeHandle& nh);         
         void CamInGeneralBody_config(ros::NodeHandle& nh);            
         void LEDInBodyAndOutlierSetting_config(ros::NodeHandle& nh);
+        void GTSAM_config();
 
 // dynamics.cpp //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -160,6 +163,8 @@ namespace ledvo
             std::vector<gtsam::Point3> pts_3d_detect,
             bool initialing
         );
+        void raw_landmarks_pub(std::vector<gtsam::Point3> pts_3d_detect);
+
         std::vector<Eigen::Vector2d> LED_extract_POI(cv::Mat& frame, cv::Mat depth);
             
         void get_correspondence(
@@ -176,9 +181,11 @@ namespace ledvo
         double calculate_MAD(std::vector<double> norm_of_points);
 
 
+
+
 // objects //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        torch::Tensor tensor = torch::rand({2, 3});
+        // torch::Tensor tensor = torch::rand({2, 3});
     //primary objects
         //frames
         cv::Mat frame, display, hsv, frame_temp;
@@ -238,6 +245,7 @@ namespace ledvo
         boost::shared_ptr<sync> sync_;                    
         ros::Subscriber ugv_pose_sub, uav_pose_sub;
         ros::Subscriber uav_setpt_sub;
+        ros::Subscriber uav_ctrlmsg_sub;
         
     //publisher 
         ros::Publisher ledpose_pub, ledodom_pub, 
@@ -259,7 +267,7 @@ namespace ledvo
         std::unique_ptr<gtsam::BatchFixedLagSmoother> batchsmoother;
 
         gtsam::Values registeredLandmarks;
-        bool firstFrame = true;
+        
         int landmarkInitialTrackingCount = 0;
         gtsam::Pose3 x_current;
         gtsam::Pose3 x_previous;
@@ -304,8 +312,14 @@ namespace ledvo
         geometry_msgs::TwistStamped led_twist_estimated;
         nav_msgs::Odometry led_odom_estimated;            
 
-        Eigen::VectorXd led_twist_current;    
-            
+        Eigen::VectorXd led_twist_current; 
+
+        mavros_msgs::AttitudeTarget uav_ctrl_msg; 
+
+        int initializer_counter = 0;  
+        bool firstFrame = true;
+        double landmark_ir_alpha = 0.5;
+        std::vector<landmark> lm_dict;
     };
 }
 

@@ -54,8 +54,8 @@ std::vector<gtsam::Point2> ledvo::LedvoLib::LED_extract_POI_alter(cv::Mat& frame
     
     
     // std::cout<<im_with_keypoints.type()<<std::endl;
-    // cv::imshow("test", im_with_keypoints);
-    // cv::waitKey(4);
+    cv::imshow("test", im_with_keypoints);
+    cv::waitKey(4);
 
     gtsam::Point2 temp;
     for(auto& what : keypoints_rgb_d)
@@ -145,7 +145,7 @@ std::vector<gtsam::Point3> ledvo::LedvoLib::pointcloud_generate(
         temp.z() = 1;
 
 
-        // temp = z_depth * cameraMat.inverse() * temp;
+        temp = z_depth * cameraMat.inverse() * temp;
         
         pts_2d_detected.emplace_back(pts_2d_detected_temp[i]);
         pointclouds.emplace_back(temp);
@@ -165,11 +165,10 @@ bool ledvo::LedvoLib::process_landmarks(
     if(pts_2d_detect.size() != pts_3d_detect.size())
         pc::pattyDebug("DETECTION SIZES DO NOT MATCH...");
 
+    raw_landmarks_pub(pts_3d_detect);// just for visualization purpose
+
     if(initialing)
     {
-        std::cout<<"try to initialize..."<<std::endl;
-        // std::cout
-
         using namespace gtsam; 
 
         traj_points.points.clear();
@@ -178,66 +177,10 @@ bool ledvo::LedvoLib::process_landmarks(
         if(firstFrame)
         {
             // no need correspondences search, just initialize
-
-            noiseModel::Isotropic::shared_ptr measurementNoise = noiseModel::Isotropic::Sigma(2, 1.0); // one pixel in u and v
             std::cout<<"size here: "<<pts_2d_detect.size()<<std::endl;
 
-            for(int i = 0; i < pts_2d_detect.size(); i++)
-            {
 
-                PinholeCamera<Cal3_S2> camera(x_current, *K);
-                Point2 measurement = pts_2d_detect[i];
-
-                newFactors.push_back(
-                    GenericProjectionFactor<Pose3, Point3, Cal3_S2>(
-                        measurement,
-                        measurementNoise,
-                        Symbol('x', k),
-                        Symbol('l', m),
-                        K
-                    )
-                );
-
-                // pose_cam_inGeneralBodySE3.matrix() * Eigen::Vector4d(pts_3d_detect[i],1);
-                Eigen::Vector4d homo_pt_temp;
-                std::cout<<"one pt here"<<std::endl;
-                // std::cout<<cameraMat<<std::endl;
-
-                std::cout<<pts_2d_detect[i]<<std::endl;
-                homo_pt_temp << pts_3d_detect[i], 1; 
-                std::cout<<homo_pt_temp<<std::endl;
-                std::cout<<pose_cam_inGeneralBodySE3.matrix()<<std::endl;
-                geometry_msgs::Point posi_temp;
-                
-                std::cout<<pose_uav_inWorld_SE3.matrix()<<std::endl;
-                homo_pt_temp =  pose_uav_inWorld_SE3.matrix() * pose_cam_inGeneralBodySE3.matrix() * homo_pt_temp;
-                
-                posi_temp.x = homo_pt_temp(0);
-                posi_temp.y = homo_pt_temp(1);
-                posi_temp.z = homo_pt_temp(2);
-                traj_points.points.push_back(posi_temp);
-
-
-
-                // if(!landmarkValues.exists(Symbol('l',m)))
-                // {
-                //     landmarkValues.insert<Point3>(
-                //         Symbol('l', m),
-                //         points[j] + Point3(-0.25, 0.20, 0.15)
-                //     );
-
-                //     newValues.insert<Point3>(
-                //         Symbol('l', m),
-                //         points[j] + Point3(-0.25, 0.20, 0.15)
-                //     );
-                // }
-
-                m++;
-            }
-
-            // firstFrame = false;
-
-            // pc::pattyDebug("TEST INITIALIZATION!");
+            firstFrame = false;
         }
         else
         {
@@ -246,13 +189,44 @@ bool ledvo::LedvoLib::process_landmarks(
     }
     else
     {
+
         
 
     }
 
     traj_points.header.stamp = ros::Time::now();
+
+    cout<<traj_points.points.size()<<std::endl;
     lm_pub.publish(traj_points);
 }
+
+void ledvo::LedvoLib::raw_landmarks_pub(std::vector<gtsam::Point3> pts_3d_detect)
+{
+    geometry_msgs::Point posi_temp;
+
+    for(int i = 0; i < pts_3d_detect.size(); i++)
+    {
+        Eigen::Vector4d homo_pt_temp;
+        homo_pt_temp << pts_3d_detect[i], 1; 
+
+        homo_pt_temp =  pose_uav_inWorld_SE3.matrix() * pose_cam_inGeneralBodySE3.matrix() * homo_pt_temp;
+        
+        posi_temp.x = homo_pt_temp(0);
+        posi_temp.y = homo_pt_temp(1);
+        posi_temp.z = homo_pt_temp(2);
+        
+        traj_points.points.push_back(posi_temp);
+
+    }
+
+    posi_temp.x = pose_uav_inWorld_SE3.translation().x();
+    posi_temp.y = pose_uav_inWorld_SE3.translation().y();
+    posi_temp.z = pose_uav_inWorld_SE3.translation().z();
+
+    traj_points.points.push_back(posi_temp);
+
+}
+
 
 void ledvo::LedvoLib::get_correspondence(
     std::vector<Eigen::Vector2d>& pts_2d_detected

@@ -16,7 +16,7 @@
 */
 
 /**
- * \file ledvo.cpp
+ * \file main_process.cpp
  * \date 08/11/2023
  * \author pattylo
  * \copyright (c) AIRO-LAB, RCUAS of Hong Kong Polytechnic University
@@ -30,43 +30,11 @@ ledvo::LedvoLib::LedvoLib(ros::NodeHandle& nh)
     ROS_INFO("LED Nodelet Initiated...");
 
     doALOTofConfigs(nh);
-    registerRosCommunicate(nh);    
+}
 
-    // batchsmoother = std::make_unique<gtsam::BatchFixedLagSmoother>(
-    //     batchLag,
-    //     batchLMparameters
-    // );
-
-    // x_current = gtsam::Pose3().Identity();
-    // x_current.print();
-
-    // timeStart = ros::Time::now().toSec();
-    
-    // // K = std::make_shared<gtsam::Cal3_S2>(
-    // //     cameraMat(0,0),
-    // //     cameraMat(1,1),
-    // //     0.0,
-    // //     cameraMat(0,2),
-    // //     cameraMat(1,2)
-    // // );
-
-    // // std::cout<<cameraMat<<std::endl<<std::endl;;
-    // // std::cout<<K->K()<<std::endl;
-
-    // traj_points.header.frame_id = "world";
-
-    // traj_points.ns = "GT_points";
-
-    // traj_points.id = 0;
-    // traj_points.action = visualization_msgs::Marker::ADD;
-    // traj_points.pose.orientation.w = 1.0;
-    // traj_points.type = visualization_msgs::Marker::SPHERE_LIST;
-    // traj_points.scale.x = traj_points.scale.y = traj_points.scale.z = 0.02;
-    // traj_points.color.a=1;
-    // traj_points.color.g=1;
-    // traj_points.color.r=0;
-    // traj_points.color.b=0;
-
+void ledvo::LedvoLib::uav_ctrl_msg_callback(const mavros_msgs::AttitudeTarget::ConstPtr &msg)
+{
+    uav_ctrl_msg = *msg;
 }
 
 void ledvo::LedvoLib::camera_callback(
@@ -74,7 +42,6 @@ void ledvo::LedvoLib::camera_callback(
     const sensor_msgs::Image::ConstPtr& depthmsg
 )
 {
-    std::cout<<"hi"<<std::endl;
 
     cv_bridge::CvImageConstPtr depth_ptr;
     led_pose_header = rgbmsg->header;
@@ -112,10 +79,9 @@ void ledvo::LedvoLib::camera_callback(
     //     ROS_RED_STREAM("RESET TERMINAL!");
     // }           
            
-    // solve_pose_w_LED(frame, depth);
+    solve_pose_w_LED(frame, depth);
 
 
-    // std::cout<<"hi?"<<std::endl;
     
     // double tock = ros::Time::now().toSec();  
 
@@ -375,3 +341,4 @@ void ledvo::LedvoLib::terminal_msg_display(double hz)
     }
     std::cout<<"fail: "<< error_no<<" / "<<total_no<<std::endl;
 }
+

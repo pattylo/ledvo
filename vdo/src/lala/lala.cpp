@@ -66,15 +66,15 @@
 
  
 
-#include <torch/torch.h>
+// #include <torch/torch.h>
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "planner_node");
     ros::NodeHandle nh("~");
 
-    torch::Tensor tensor = torch::rand({2, 3});
-  std::cout << tensor << std::endl;
+//     torch::Tensor tensor = torch::rand({2, 3});
+//   std::cout << tensor << std::endl;
 
     using namespace gtsam;
     using namespace std;
@@ -321,22 +321,32 @@ int main(int argc, char **argv)
 
     LevenbergMarquardtParams LMparameters;
 
-    // LMparameters.absoluteErrorTol = 1e-8;
+    LMparameters.absoluteErrorTol = 1e-8;
     // LMparameters.relativeErrorTol = 1e-8;
     // LMparameters.maxIterations = 500;
-    LMparameters.verbosity = gtsam::NonlinearOptimizerParams::ERROR;
-    LMparameters.verbosityLM = gtsam::LevenbergMarquardtParams::SUMMARY;
+    LMparameters.verbosity = gtsam::NonlinearOptimizerParams::SILENT;
+    LMparameters.verbosityLM = gtsam::LevenbergMarquardtParams::SILENT;
+    // LMparameters.ver
     
-    double lag = 2.5;
+    double lag = 2.50;
     BatchFixedLagSmoother batchsmoother(lag, LMparameters);
+    // batchsmoother.smootherLag()
 
     NonlinearFactorGraph newFactors;
     Values newValues;
     Values landmarkValues;
     FixedLagSmoother::KeyTimestampMap newTimestamps;
 
+    // FactorIndices 
+    // FactorIndex factor_index;
+
+    KeyVector factors_to_be_revmoved;
+
     for(size_t k = 0; k < poses.size(); k++)
     {
+        cout<<"\n\n\n##########################"<<endl;
+        std::cout<<k<<" iteration"<<std::endl<<std::endl<<std::endl;
+
         for(size_t j = 0; j < points.size(); ++j)
         {
             PinholeCamera<Cal3_S2> camera(poses[k], *K);
@@ -404,44 +414,74 @@ int main(int argc, char **argv)
         else
         {
             std::cout<<"time: "<<k * 0.5<<std::endl;
-            // newValues.print();
-
             
+            FactorIndices to_be_removed_temp;
+            // newValues.print();
+            if (k * 0.5 > 4.0)
+            {
+                auto ahah2 = batchsmoother.getFactors().keys().find(Symbol('x',14));
+                
+                // batchsmoother.getFactors().
+                cout<<"ahahahaha: "<<*ahah2<<endl<<endl<<endl;  
+
+                for (auto what : batchsmoother.getFactors())
+                {
+                    // cout<<what-><<endl<<endl;
+
+                } 
+                return 0;
+                // to_be_removed_temp.emplace_back(*ahah2);
+            }
 
             FixedLagSmoother::Result lala = batchsmoother.update(
-                newFactors,
-                newValues,
-                newTimestamps
-            );
-            
+                    newFactors,
+                    newValues,
+                    newTimestamps,
+                    to_be_removed_temp
+                );
+
+
+            // if (k * 0.5 > 2.5)
+            // {
+            //     cout<<"\n\n/////////////////"<<std::endl;
+            //     // cout<<"here!  "<<key<<endl;
+            //     auto ahah1 = batchsmoother.getFactors().keys().find(Symbol('x',0));
+                // auto ahah2 = batchsmoother.getFactors().keys().find();
+    
+            //     cout<<"here!"<<*ahah1<<endl;
+            //     cout<<"here!"<<*ahah2<<endl;
+            //     cout<<"/////////////////\n\n"<<std::endl;
+            // }
+                
+            // batchsmoother.calculateEstimate<Pose3>(Symbol('x',k)).print("Batch Estimate:");
+            // batchsmoother.calculateEstimate<Pose3>(Symbol('x',k)).tr
+            // batchsmoother.calculateEstimate().print();
+            batchsmoother.getFactors().print();
+
             
 
-            batchsmoother.calculateEstimate<Pose3>(Symbol('x',k)).print("Batch Estimate:");
-            // batchsmoother.calculateEstimate<Pose3>(Symbol('x',k)).tr
-            batchsmoother.calculateEstimate().print();
             
-            std::cout<<"current factor size: "<<batchsmoother.getFactors().size()<<std::endl;;
-            std::cout<<"current batch size: "<<batchsmoother.calculateEstimate().size()<<std::endl;
-            std::cout<<lala.getError()<<std::endl;
+            // std::cout<<"current factor size: "<<batchsmoother.getFactors().size()<<std::endl;;
+            // std::cout<<"current batch size: "<<batchsmoother.calculateEstimate().size()<<std::endl;
+            // std::cout<<lala.getError()<<std::endl;
             // lala.
 
             newFactors.resize(0);
             newValues.clear();
             newTimestamps.clear();
+            cout<<batchsmoother.getFactors().size()<<endl;
 
         }
 
         
 
-        std::cout<<"1 iteration"<<std::endl<<std::endl<<std::endl;
+        
 
     }
 
-    batchsmoother.calculateEstimate().print();
+    // batchsmoother.calculateEstimate().print();
 
-
-
-
+    batchsmoother.getFactors();
 
     return 0;
 }

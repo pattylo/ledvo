@@ -61,6 +61,7 @@
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
+#include <mavros_msgs/AttitudeTarget.h>
 #include <nav_msgs/Odometry.h>
 
 #include <sensor_msgs/Imu.h>

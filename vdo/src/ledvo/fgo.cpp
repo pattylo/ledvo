@@ -25,40 +25,20 @@
 
 #include "include/ledvo_lib.h"
 
-double ledvo::LedvoLib::get_reprojection_error(
-    std::vector<Eigen::Vector3d> pts_3d, 
-    std::vector<Eigen::Vector2d> pts_2d, 
-    Sophus::SE3d pose, 
-    bool draw_reproject
-)
-{
-    double e = 0;
-
-    Eigen::Vector2d reproject, error;
-
-    for(int i = 0; i < pts_3d.size(); i++)
-    {
-        reproject = reproject_3D_2D(pts_3d[i], pose);
-        error = pts_2d[i] - reproject;
-        e = e + error.norm();
-
-        if(draw_reproject)
-            cv::circle(display, cv::Point(reproject(0), reproject(1)), 2.5, CV_RGB(0,255,0),-1);
-        
-    }
-
-    return e;
-};      
-
-
-
 void ledvo::LedvoLib::solve_pose_w_LED(cv::Mat& frame, cv::Mat depth)
 {   
     
     if(!LED_tracker_initiated_or_tracked)
+    {
         initialization(frame, depth);
+        // cout<<"end initialization"<<endl;
+    }
     else
+    {
         recursive_filtering(frame, depth);
+        cout<<"filter here"<<endl;
+    }
+        
 }
 
 void ledvo::LedvoLib::initialization(cv::Mat& frame, cv::Mat depth)
@@ -75,8 +55,7 @@ void ledvo::LedvoLib::initialization(cv::Mat& frame, cv::Mat depth)
 
     if(process_landmarks(pts_2d_detect, pts_3d_detect, true))
         LED_tracker_initiated_or_tracked = true;
-    
-    return;
+
 }
 
 
@@ -184,3 +163,30 @@ void ledvo::LedvoLib::solve_pnp_initial_pose(std::vector<Eigen::Vector2d> pts_2d
     // }
 
 }
+
+double ledvo::LedvoLib::get_reprojection_error(
+    std::vector<Eigen::Vector3d> pts_3d, 
+    std::vector<Eigen::Vector2d> pts_2d, 
+    Sophus::SE3d pose, 
+    bool draw_reproject
+)
+{
+    double e = 0;
+
+    Eigen::Vector2d reproject, error;
+
+    for(int i = 0; i < pts_3d.size(); i++)
+    {
+        reproject = reproject_3D_2D(pts_3d[i], pose);
+        error = pts_2d[i] - reproject;
+        e = e + error.norm();
+
+        if(draw_reproject)
+            cv::circle(display, cv::Point(reproject(0), reproject(1)), 2.5, CV_RGB(0,255,0),-1);
+        
+    }
+
+    return e;
+};      
+
+
