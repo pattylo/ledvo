@@ -95,8 +95,6 @@ void ledvo::LedvoLib::key_frame_manager(
 
     if(!select_keyframe())
     {
-        
-
         return;
     }
     else
@@ -172,6 +170,24 @@ void ledvo::LedvoLib::key_frame_manager(
         );
     }
 
+    
+    cout<<"INFERENCE HERE!"<<endl;
+    tensor_to_be_inferred = ctrl_msg_tensor.clone();
+    dynamic_tensor_tk = 0;
+
+    if(add_dynamic)
+        add_dynamic_factor_wrapper(
+            Symbol('x', keyframe_k),
+            Symbol('x', keyframe_k - 1),
+            dynamic_factor_infer(tensor_to_be_inferred),
+            noiseModel::Diagonal::Sigmas(
+                (
+                    Vector(6) << 
+                        Vector3::Constant(0.003),Vector3::Constant(0.1)
+                ).finished()
+            )
+        );
+
     cout<<"Current factor size: "<<newFactors.size()<<endl<<endl;
 }
 
@@ -204,8 +220,6 @@ bool ledvo::LedvoLib::select_keyframe()
         key_first_generate = true;
         key_frame_last_request = ros::Time::now().toSec();
 
-        // add_factor_wrapper();
-
         return true;
     }
 
@@ -231,9 +245,10 @@ bool ledvo::LedvoLib::select_keyframe()
     if (
         overlappingRate < 0.4 
         || 
-        ros::Time::now().toSec() - key_frame_last_request > ros::Duration(2.0).toSec()
+        // ros::Time::now().toSec() - key_frame_last_request > ros::Duration(1.6).toSec()
+        dynamic_tensor_tk > 160
     )
-    {
+    {   
         contour_previous = contour_current;
         ROS_YELLOW_STREAM("NEW KEY FRAME!");
         key_frame_last_request = ros::Time::now().toSec();
@@ -297,17 +312,7 @@ void ledvo::LedvoLib::add_visual_factor_wrapper(
     // cout<<"from measured: "<<pt_2d_measured<<endl<<endl;
     // cout<<"from reprojec: "<<camera.project(node_lm_point)<<endl<<endl;
 
-    cout<<"error here: "<<(pt_2d_measured - camera.project(node_lm_point)).norm()<<endl<<endl;
-
-    cout<<endl<<endl;
-
-    // internal::LevenbergMarquardtState ;
-    // std::unique_ptr<internal::LevenbergMarquardtState>(
-    //     new internal::LevenbergMarquardtState(
-    //         newValues, 
-    //         newFactors.error(newValues),
-    //         params.lambdaInitial, params.lambdaFactor
-    //         ));
+    // cout<<"error here: "<<(pt_2d_measured - camera.project(node_lm_point)).norm()<<endl<<endl;
 
 
     newFactors.push_back(
@@ -344,6 +349,26 @@ void ledvo::LedvoLib::add_visual_factor_wrapper(
 
     newTimestamps[node_pose_id] = ros::Time::now().toSec() - starting_time;
     newTimestamps[node_lm_id] = ros::Time::now().toSec() - starting_time;
+}
+
+void ledvo::LedvoLib::add_dynamic_factor_wrapper(
+    gtsam::Symbol node_pose_previous_id,
+    gtsam::Symbol node_pose_current_id,
+    gtsam::Point3 dynamic_factor,
+    gtsam::noiseModel::Diagonal::shared_ptr deltaNoise
+)
+{
+    using namespace gtsam;
+
+    Pose3 betweenFactor = Pose3(Rot3::Identity(), dynamic_factor);
+
+    newFactors.add(BetweenFactor<Pose3>(
+        node_pose_previous_id, 
+        node_pose_current_id, 
+        betweenFactor, 
+        deltaNoise)
+    );
+
 }
 
 

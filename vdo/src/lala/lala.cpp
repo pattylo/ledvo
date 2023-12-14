@@ -73,21 +73,74 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "planner_node");
     ros::NodeHandle nh("~");
 
-    torch::Tensor dynamicTensor = torch::tensor({1, 2, 3}, torch::kInt32);
+    using namespace std;
 
-    // Print the initial tensor
-    std::cout << "Initial Tensor:\n" << dynamicTensor << "\n\n";
+    torch::Tensor tensor3d = torch::zeros({1, 4, 1}, torch::kFloat32);
 
-    // Resize the tensor to have 5 elements
-    dynamicTensor.resize_({5});
+    std::cout << "Tensor with shape [1, 4, 1] filled with zeros:\n" << tensor3d << "\n";
 
-    std::cout << "Right after resize Tensor:\n" << dynamicTensor << "\n\n";
+    std::cout << "Size of the tensor: " << tensor3d.sizes() << "\n";
 
-    // Fill the additional elements with zeros
-    dynamicTensor.slice(0, 3, 4).fill_(10);
+    for (int j = 0; j < 10; ++j) 
+    {
+        cout<<j<<endl;
+        // Expand the tensor to shape [1, 4, j + 1] before filling
+        if(j == 0)
+        {
+            tensor3d[0][0][0] = 0.1;
+            tensor3d[0][1][0] = 0.2;
+            tensor3d[0][2][0] = 0.3;
+            tensor3d[0][3][0] = 0.4;
 
-    // Print the resized tensor
-    std::cout << "Resized Tensor:\n" << dynamicTensor << "\n";
+            continue;
+        }
+
+        torch::Tensor new_element = torch::zeros({1, 4, 1}, torch::kFloat32);
+        new_element[0][0][0] = 0 * j;
+        new_element[0][1][0] = 1 * j;
+        new_element[0][2][0] = 2 * j;
+        new_element[0][3][0] = 3 * j;
+
+        tensor3d = torch::cat({tensor3d, new_element}, 2);
+    }
+
+    cout<<tensor3d.sizes()<<endl;
+    cout<<tensor3d<<endl;
+
+    // cout<<tensor3d<<endl;
+
+
+    std::cout<<endl<<endl << "Size of the tensor: " << tensor3d.sizes() << "\n";
+
+     // Add padding to the tensor to make its shape [1, 4, 200]
+    int target_size = 200;
+    int current_size = tensor3d.size(2);
+
+    // Calculate the padding size
+    int padding_size = target_size - current_size;
+
+    // Create a tensor of zeros to use as padding
+    torch::Tensor padding_tensor = torch::zeros({1, 4, padding_size}, torch::kFloat32);
+
+    // Concatenate the padding tensor with the original tensor along the third dimension
+    tensor3d = torch::cat({padding_tensor, tensor3d}, 2);
+
+    // Print the modified tensor with padding
+    // std::cout << "Modified tensor with shape [1, 4, 200] after adding padding:\n" << tensor3d << "\n";
+
+    // Print the size of the modified tensor
+    std::cout << "Size of the modified tensor: " << tensor3d.sizes() << "\n";
+
+
+    // double tic = ros::Time::now().toSec();
+    // at::Tensor output = module.forward({tensor3d}).toTensor();
+    // double tac = ros::Time::now().toSec();
+
+    // std::cout << output << std::endl<<std::endl;;
+    // cout<<output.sizes()[0]<<endl;
+    // cout<<output.sizes()[1]<<endl;
+
+    // std::cout << "INFERENCE TIME: " << tac - tic << std::endl;
 
 
 

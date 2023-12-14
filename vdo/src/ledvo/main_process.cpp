@@ -32,16 +32,14 @@ ledvo::LedvoLib::LedvoLib(ros::NodeHandle& nh)
     doALOTofConfigs(nh);
 }
 
-void ledvo::LedvoLib::uav_ctrl_msg_callback(const mavros_msgs::AttitudeTarget::ConstPtr &msg)
-{
-    uav_ctrl_msg = *msg;
-}
+
 
 void ledvo::LedvoLib::camera_callback(
     const sensor_msgs::CompressedImage::ConstPtr& rgbmsg, 
     const sensor_msgs::Image::ConstPtr& depthmsg
 )
 {
+    // cout<<"camera"<<endl;
 
     cv_bridge::CvImageConstPtr depth_ptr;
     led_pose_header = rgbmsg->header;
@@ -84,7 +82,13 @@ void ledvo::LedvoLib::camera_callback(
 
 
     
-    // double tock = ros::Time::now().toSec();  
+    double tock = ros::Time::now().toSec();  
+
+    // cout<<1 / (tock - tick)<<endl;
+    if(1 / (tock - tick) < 30)
+    {
+        cout<<1 / (tock - tick)<<endl;
+    }
 
     // if(tracker_started)
     //     total_no++;
@@ -240,11 +244,11 @@ void ledvo::LedvoLib::calculate_msg_callback(const std_msgs::Bool::ConstPtr& msg
         Pose3 x_se3_temp = result.at<Pose3>(Symbol('x',i));
         Sophus::SE3d x_gt = posemsg_to_SE3(keyframe_ground_truth[i]);
 
-        error_ = error_ + (x_se3_temp.translation() - x_gt.translation()).norm();
+        error_ = error_ + pow((x_se3_temp.translation() - x_gt.translation()).norm(),2);
     }
 
     ROS_RED_STREAM("FINAL ERROR!");
-    cout<<error_<<endl;
+    cout<<sqrt(error_ / keyframe_ground_truth.size())<<endl;
 
 
     // gtsam::FixedLagSmoother::Result lala = batchsmoother->update(

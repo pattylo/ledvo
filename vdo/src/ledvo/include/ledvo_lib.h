@@ -53,11 +53,10 @@
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 #include <gtsam/nonlinear/internal/LevenbergMarquardtState.h>
 
-
 #include "vdo/ledvo_log.h"
 
-
 #include "torch/torch.h"
+#include "torch/script.h"
 
 // map definition for convinience
 #define COLOR_SUB_TOPIC CAMERA_SUB_TOPIC_A
@@ -117,8 +116,8 @@ namespace ledvo
         void ugv_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
         void uav_pose_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
         void uav_setpt_callback(const geometry_msgs::PoseStamped::ConstPtr& pose);
-        void uav_ctrl_msg_callback(const mavros_msgs::AttitudeTarget::ConstPtr& msg);
-        void calculate_msg_callback(const std_msgs::Bool::ConstPtr& msg);
+        
+        void calculate_msg_callback(const std_msgs::Bool::ConstPtr& msg);        
 
         void set_image_to_publish(
                 double hz, 
@@ -139,10 +138,14 @@ namespace ledvo
         void CamInGeneralBody_config(ros::NodeHandle& nh);            
         void LEDInBodyAndOutlierSetting_config(ros::NodeHandle& nh);
         void GTSAM_config();
-        void TORCH_config();
+        void TORCH_config(ros::NodeHandle& nh);
         void VIZ_config();
 
 // dynamics.cpp //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        void uav_ctrl_msg_callback(const mavros_msgs::AttitudeTarget::ConstPtr& msg);
+        void dummy_callback(const std_msgs::Bool::ConstPtr& msg);
+        void stack_ctrl_msg_buffer(mavros_msgs::AttitudeTarget ctrl_msg);
+        Eigen::Vector3d dynamic_factor_infer(torch::Tensor tensor_to_be_inferred);
 
 
 // fgo.cpp //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -184,6 +187,13 @@ namespace ledvo
 
             gtsam::Symbol node_lm_id,
             gtsam::Point3 node_lm_point
+        );
+
+        void add_dynamic_factor_wrapper(
+            gtsam::Symbol node_pose_previous_id,
+            gtsam::Symbol node_pose_current_id,
+            gtsam::Point3 dynamic_factor,
+            gtsam::noiseModel::Diagonal::shared_ptr deltaNoise
         );
 
 // landmarks.cpp //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -298,11 +308,13 @@ namespace ledvo
         ros::Subscriber uav_setpt_sub;
         ros::Subscriber uav_ctrlmsg_sub;
         ros::Subscriber cal_msg_sub;
+        ros::Subscriber dummy_msg_sub;
 
     //publisher 
         ros::Publisher ledpose_pub, ledodom_pub, 
                         campose_pub, ugvpose_pub, uavpose_pub,
                         record_led_pub, record_uav_pub;
+        ros::Publisher dummy_msg_pub;
         ros::Publisher lm_pub;
         image_transport::Publisher pubimage;
         image_transport::Publisher pubimage_input;
@@ -386,8 +398,14 @@ namespace ledvo
 
         std::vector<geometry_msgs::PoseStamped> keyframe_ground_truth;
 
-        
+        // torch::tensor
+        torch::Tensor ctrl_msg_tensor = torch::zeros({1, 4, 1}, torch::kFloat32);
+        int dynamic_tensor_tk = 0;
+        torch::jit::script::Module module;
 
+        torch::Tensor tensor_to_be_inferred;
+
+        bool add_dynamic = false;
 
     };
 }

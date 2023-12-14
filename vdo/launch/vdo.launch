@@ -8,6 +8,7 @@
     <node pkg="nodelet" type="nodelet" name="ledvo" args="load ledvo/LedvoNodelet ledvo_master" output="screen">
         <rosparam command="load" file="$(find vdo)/launch/configs/LED_SUBPUB_topics.yaml" />
         <param name="pt_file_loc" type="string" value="$(find vdo)/launch/model/model_cpp.pt"/>
+        <param name="add_dynamic" type="bool" value="true"/>
     </node> 
 </launch>
 

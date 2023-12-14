@@ -33,7 +33,7 @@ void ledvo::LedvoLib::doALOTofConfigs(ros::NodeHandle& nh)
     CamInGeneralBody_config(nh);
     LEDInBodyAndOutlierSetting_config(nh);
     GTSAM_config();
-    TORCH_config();
+    TORCH_config(nh);
 
     registerRosCommunicate(nh); 
 }
@@ -67,6 +67,9 @@ void ledvo::LedvoLib::registerRosCommunicate(ros::NodeHandle& nh)
     
     cal_msg_sub = nh.subscribe<std_msgs::Bool>
         ("/calculate", 1, &LedvoLib::calculate_msg_callback, this);
+
+    dummy_msg_sub = nh.subscribe<std_msgs::Bool>
+        ("/dummy", 1, &LedvoLib::dummy_callback, this);
     
     //publish
     image_transport::ImageTransport image_transport_(nh);
@@ -103,6 +106,8 @@ void ledvo::LedvoLib::registerRosCommunicate(ros::NodeHandle& nh)
     
 
     lm_pub = nh.advertise<visualization_msgs::Marker>("/gt_points/traj", 1, true);
+
+    dummy_msg_pub = nh.advertise<std_msgs::Bool>("/dummy", 1, true);
 }
 
 void ledvo::LedvoLib::POI_config(ros::NodeHandle &nh)
@@ -277,9 +282,31 @@ void ledvo::LedvoLib::GTSAM_config()
 
 }
 
-void ledvo::LedvoLib::TORCH_config()
+void ledvo::LedvoLib::TORCH_config(ros::NodeHandle& nh)
 {
-    
+    std::string filename;
+    ROS_GREEN_STREAM("LOAD PT FILE!");
+
+    nh.getParam("/ledvo/pt_file_loc", filename);
+    nh.getParam("/ledvo/add_dynamic", add_dynamic);
+    std::cout<<filename<<std::endl;
+    std::cout<<add_dynamic<<endl;
+
+    try 
+    {
+        module = torch::jit::load(filename);
+        ROS_GREEN_STREAM("LOAD PT FILE SUCCESSFUL!");
+    }
+    catch (const c10::Error& e) 
+    {
+        pc::pattyDebug("ERROR! LOAD PT FILE UNSUCCESSFUL!");
+    }
+
+    torch::Tensor lala = torch::rand({1,4,200}, torch::kFloat32);
+
+    at::Tensor output = module.forward({lala}).toTensor();
+    std::cout << output << std::endl<<std::endl;;
+
 
 }
 
