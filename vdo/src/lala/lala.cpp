@@ -66,12 +66,40 @@
 
  
 
-// #include <torch/torch.h>
+#include "torch/torch.h"
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "planner_node");
     ros::NodeHandle nh("~");
+
+    torch::Tensor dynamicTensor = torch::tensor({1, 2, 3}, torch::kInt32);
+
+    // Print the initial tensor
+    std::cout << "Initial Tensor:\n" << dynamicTensor << "\n\n";
+
+    // Resize the tensor to have 5 elements
+    dynamicTensor.resize_({5});
+
+    std::cout << "Right after resize Tensor:\n" << dynamicTensor << "\n\n";
+
+    // Fill the additional elements with zeros
+    dynamicTensor.slice(0, 3, 4).fill_(10);
+
+    // Print the resized tensor
+    std::cout << "Resized Tensor:\n" << dynamicTensor << "\n";
+
+
+
+
+
+
+
+
+
+
+
+
 
 //     torch::Tensor tensor = torch::rand({2, 3});
 //   std::cout << tensor << std::endl;
@@ -335,97 +363,97 @@ int main(int argc, char **argv)
     Values landmarkValues;
     FixedLagSmoother::KeyTimestampMap newTimestamps;
 
-    for(size_t k = 0; k < poses.size(); k++)
-    {
-        for(size_t j = 0; j < points.size(); ++j)
-        {
-            PinholeCamera<Cal3_S2> camera(poses[k], *K);
-            // this will be the points that
-            Point2 measurement = camera.project(points[j]);
+    // for(size_t k = 0; k < poses.size(); k++)
+    // {
+    //     for(size_t j = 0; j < points.size(); ++j)
+    //     {
+    //         PinholeCamera<Cal3_S2> camera(poses[k], *K);
+    //         // this will be the points that
+    //         Point2 measurement = camera.project(points[j]);
 
-            newFactors.push_back(
-                GenericProjectionFactor<Pose3, Point3, Cal3_S2>(
-                    measurement, 
-                    measurementNoise, 
-                    Symbol('x', k), 
-                    Symbol('l', j), 
-                    K
-                )
-            );
+    //         newFactors.push_back(
+    //             GenericProjectionFactor<Pose3, Point3, Cal3_S2>(
+    //                 measurement, 
+    //                 measurementNoise, 
+    //                 Symbol('x', k), 
+    //                 Symbol('l', j), 
+    //                 K
+    //             )
+    //         );
 
-            if(!newValues.exists(Symbol('x',k)))
-            {
-                newValues.insert(
-                    Symbol('x', k), 
-                    poses[k].compose(
-                        Pose3(
-                            Rot3::Rodrigues(-0.1, 0.2, 0.25), 
-                            Point3(0.05, -0.10, 0.20)
-                        )
-                    )
-                );
-            }
+    //         if(!newValues.exists(Symbol('x',k)))
+    //         {
+    //             newValues.insert(
+    //                 Symbol('x', k), 
+    //                 poses[k].compose(
+    //                     Pose3(
+    //                         Rot3::Rodrigues(-0.1, 0.2, 0.25), 
+    //                         Point3(0.05, -0.10, 0.20)
+    //                     )
+    //                 )
+    //             );
+    //         }
 
-            if(!landmarkValues.exists(Symbol('l',j)))
-            {
-                landmarkValues.insert<Point3>(
-                    Symbol('l',j),
-                    points[j] + Point3(-0.25, 0.20, 0.15)
-                );
+    //         if(!landmarkValues.exists(Symbol('l',j)))
+    //         {
+    //             landmarkValues.insert<Point3>(
+    //                 Symbol('l',j),
+    //                 points[j] + Point3(-0.25, 0.20, 0.15)
+    //             );
 
-                newValues.insert<Point3>(
-                    Symbol('l',j),
-                    points[j] + Point3(-0.25, 0.20, 0.15)
-                );
-            }
+    //             newValues.insert<Point3>(
+    //                 Symbol('l',j),
+    //                 points[j] + Point3(-0.25, 0.20, 0.15)
+    //             );
+    //         }
 
-            newTimestamps[Symbol('x',k)] = k * 0.5;
-            // newTimestamps[Symbol('l',j)] = k * 0.5;
+    //         newTimestamps[Symbol('x',k)] = k * 0.5;
+    //         // newTimestamps[Symbol('l',j)] = k * 0.5;
             
-        }
+    //     }
 
-        std::cout<<"lala\n"<<std::endl;
+    //     std::cout<<"lala\n"<<std::endl;
 
-        if(k == 0)
-        {
-            noiseModel::Diagonal::shared_ptr poseNoise = noiseModel::Diagonal::Sigmas((Vector(6) << Vector3::Constant(0.3),Vector3::Constant(0.1)).finished()); // 30cm std on x,y,z 0.1 rad on roll,pitch,yaw
-            newFactors.addPrior(Symbol('x', 0), poses[0], poseNoise);
-            // newValues.insert(Symbol('x', 0), poses[0].compose(Pose3(Rot3::Rodrigues(-0.1, 0.2, 0.25), Point3(0.05, -0.10, 0.20))));
-            newTimestamps[Symbol('x', 0)] = 0.0;
-            // newFactors.
+    //     if(k == 0)
+    //     {
+    //         noiseModel::Diagonal::shared_ptr poseNoise = noiseModel::Diagonal::Sigmas((Vector(6) << Vector3::Constant(0.3),Vector3::Constant(0.1)).finished()); // 30cm std on x,y,z 0.1 rad on roll,pitch,yaw
+    //         newFactors.addPrior(Symbol('x', 0), poses[0], poseNoise);
+    //         // newValues.insert(Symbol('x', 0), poses[0].compose(Pose3(Rot3::Rodrigues(-0.1, 0.2, 0.25), Point3(0.05, -0.10, 0.20))));
+    //         newTimestamps[Symbol('x', 0)] = 0.0;
+    //         // newFactors.
 
-            noiseModel::Isotropic::shared_ptr pointNoise = noiseModel::Isotropic::Sigma(3, 0.1);
-            newFactors.addPrior(Symbol('l',0), points[0], pointNoise);
-            // newValues.insert<Point3>(Symbol('l',0), points[0] + Point3(-0.25, 0.20, 0.15));
-            newTimestamps[Symbol('l', 0)] = 0.0;
+    //         noiseModel::Isotropic::shared_ptr pointNoise = noiseModel::Isotropic::Sigma(3, 0.1);
+    //         newFactors.addPrior(Symbol('l',0), points[0], pointNoise);
+    //         // newValues.insert<Point3>(Symbol('l',0), points[0] + Point3(-0.25, 0.20, 0.15));
+    //         newTimestamps[Symbol('l', 0)] = 0.0;
 
-            std::cout<<"init!"<<std::endl;
-        }
-        else
-        {
-            std::cout<<"time: "<<k * 0.5<<std::endl;
+    //         std::cout<<"init!"<<std::endl;
+    //     }
+    //     else
+    //     {
+    //         std::cout<<"time: "<<k * 0.5<<std::endl;
         
-        }
+    //     }
 
         
 
-        std::cout<<"1 iteration"<<std::endl<<std::endl<<std::endl;
+    //     std::cout<<"1 iteration"<<std::endl<<std::endl<<std::endl;
 
-    }
+    // }
 
-    cout<<"ERROR HERE===> "<<newFactors.error(newValues)<<endl;;
+    // cout<<"ERROR HERE===> "<<newFactors.error(newValues)<<endl;;
 
-    FixedLagSmoother::Result lala = batchsmoother.update(
-                newFactors,
-                newValues,
-                newTimestamps
-            );
+    // FixedLagSmoother::Result lala = batchsmoother.update(
+    //             newFactors,
+    //             newValues,
+    //             newTimestamps
+    //         );
 
-    lala.print();
+    // lala.print();
 
     // batchsmoother.calculateEstimate().print();
 
-
+    // torc
 
 
 

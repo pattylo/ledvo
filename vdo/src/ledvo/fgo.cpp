@@ -94,20 +94,30 @@ void ledvo::LedvoLib::key_frame_manager(
     using namespace gtsam;
 
     if(!select_keyframe())
+    {
+        
+
         return;
-    
+    }
+    else
+    {
+        keyframe_k++;
 
-    keyframe_k++;
+        int tracking_no = 0;
+        for(auto what : lm_dict)
+            if (what.tracking)
+                tracking_no++;
 
-    int tracking_no = 0;
-    for(auto what : lm_dict)
-        if (what.tracking)
-            tracking_no++;
+        cout<<"TRACKING: "<<tracking_no<<endl;
+        cout<<Symbol('x', keyframe_k)<<endl;
 
-    cout<<"TRACKING: "<<tracking_no<<endl;
-    cout<<Symbol('x', keyframe_k)<<endl;
+        keyframe_ground_truth.emplace_back(SE3_to_posemsg(
+                pose_cam_inWorld_SE3,
+                uav_pose_msg.header
+            )
+        );
+    }    
 
-    // pose_cam_inWorld_SE3 = pose_uav_inWorld_SE3;
     if(initializing)
     // at initialization
     {
@@ -129,11 +139,6 @@ void ledvo::LedvoLib::key_frame_manager(
                 noiseModel::Isotropic::Sigma(3, 0.001)
             );
         }
-        // add_prior_factor_wrapper(
-        //         Symbol('l', 0),
-        //         lm_dict[0].pt3d,
-        //         noiseModel::Isotropic::Sigma(3, 0.1)
-        //     );
 
         add_prior_factor_wrapper(
             Symbol('x', keyframe_k),
@@ -167,20 +172,7 @@ void ledvo::LedvoLib::key_frame_manager(
         );
     }
 
-    // FixedLagSmoother::Result lala = batchsmoother->update(
-    //     newFactors,
-    //     newValues,
-    //     newTimestamps
-    // );
-
-    // lala.print();
-    // newFactors.resize(0);
-    // newValues.clear();
-    // newTimestamps.clear();
-
-    // cout<<"Current factor size: "<<batchsmoother->getFactors().size()<<endl<<endl;
     cout<<"Current factor size: "<<newFactors.size()<<endl<<endl;
-
 }
 
 bool ledvo::LedvoLib::select_keyframe()
@@ -238,8 +230,8 @@ bool ledvo::LedvoLib::select_keyframe()
 
     if (
         overlappingRate < 0.4 
-        // || 
-        // ros::Time::now().toSec() - key_frame_last_request > ros::Duration(2.0).toSec()
+        || 
+        ros::Time::now().toSec() - key_frame_last_request > ros::Duration(2.0).toSec()
     )
     {
         contour_previous = contour_current;

@@ -46,8 +46,8 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam/slam/ProjectionFactor.h>
-// #include <gtsam/slam/ProjectionFactor.h>
-// #include <gtsam/slam/SmartProjectionPoseFactor.h>
+#include <gtsam/slam/BetweenFactor.h>
+
 #include <gtsam/nonlinear/FixedLagSmoother.h>
 #include <gtsam/nonlinear/BatchFixedLagSmoother.h>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
@@ -57,7 +57,7 @@
 #include "vdo/ledvo_log.h"
 
 
-// #include "torch/torch.h"
+#include "torch/torch.h"
 
 // map definition for convinience
 #define COLOR_SUB_TOPIC CAMERA_SUB_TOPIC_A
@@ -139,6 +139,7 @@ namespace ledvo
         void CamInGeneralBody_config(ros::NodeHandle& nh);            
         void LEDInBodyAndOutlierSetting_config(ros::NodeHandle& nh);
         void GTSAM_config();
+        void TORCH_config();
         void VIZ_config();
 
 // dynamics.cpp //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -382,6 +383,10 @@ namespace ledvo
         int keyframe_k = -1;
 
         double starting_time;
+
+        std::vector<geometry_msgs::PoseStamped> keyframe_ground_truth;
+
+        
 
 
     };

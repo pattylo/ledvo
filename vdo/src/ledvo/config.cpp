@@ -33,6 +33,7 @@ void ledvo::LedvoLib::doALOTofConfigs(ros::NodeHandle& nh)
     CamInGeneralBody_config(nh);
     LEDInBodyAndOutlierSetting_config(nh);
     GTSAM_config();
+    TORCH_config();
 
     registerRosCommunicate(nh); 
 }
@@ -273,6 +274,12 @@ void ledvo::LedvoLib::GTSAM_config()
 
     std::cout<<cameraMat<<std::endl<<std::endl;;
     std::cout<<K->K()<<std::endl;
+
+}
+
+void ledvo::LedvoLib::TORCH_config()
+{
+    
 
 }
 

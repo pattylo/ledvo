@@ -116,7 +116,7 @@ target_link_libraries(lala
   ${catkin_LIBRARIES}
   gtsam
   # gtsam_unstable
-  # ${TORCH_LIBRARIES}
+  ${TORCH_LIBRARIES}
 )
 
 add_dependencies(lala

@@ -229,6 +229,24 @@ void ledvo::LedvoLib::calculate_msg_callback(const std_msgs::Bool::ConstPtr& msg
     cout<<endl<<endl;
     result.print();
 
+
+    Pose3 xValue = result.at<Pose3>(Symbol('x',0));
+    cout<<xValue<<endl;
+
+    double error_ = 0;
+
+    for (int i = 0; i < keyframe_ground_truth.size(); i++)
+    {
+        Pose3 x_se3_temp = result.at<Pose3>(Symbol('x',i));
+        Sophus::SE3d x_gt = posemsg_to_SE3(keyframe_ground_truth[i]);
+
+        error_ = error_ + (x_se3_temp.translation() - x_gt.translation()).norm();
+    }
+
+    ROS_RED_STREAM("FINAL ERROR!");
+    cout<<error_<<endl;
+
+
     // gtsam::FixedLagSmoother::Result lala = batchsmoother->update(
     //     newFactors,
     //     newValues,
