@@ -46,9 +46,13 @@
 #include <gtsam/nonlinear/Values.h>
 #include <gtsam/slam/PriorFactor.h>
 #include <gtsam/slam/ProjectionFactor.h>
+// #include <gtsam/slam/ProjectionFactor.h>
+// #include <gtsam/slam/SmartProjectionPoseFactor.h>
 #include <gtsam/nonlinear/FixedLagSmoother.h>
 #include <gtsam/nonlinear/BatchFixedLagSmoother.h>
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
+#include <gtsam/nonlinear/internal/LevenbergMarquardtState.h>
+
 
 #include "vdo/ledvo_log.h"
 
@@ -67,6 +71,8 @@
 #define CAM_POSE_PUB_TOPIC POSE_PUB_TOPIC_D
 
 #define LED_ODOM_PUB_TOPIC ODOM_PUB_TOPIC_A
+
+// gtsam::SmartProjectionPoseFactor<gtsam::Cal3_S2> SmartFactor;
 
 using namespace std;
 
@@ -373,7 +379,7 @@ namespace ledvo
 
         bool key_first_generate = false;
         double key_frame_last_request;
-        int keyframe_k = 0;
+        int keyframe_k = -1;
 
         double starting_time;
 

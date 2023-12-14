@@ -93,6 +93,21 @@ void ledvo::LedvoLib::key_frame_manager(
 {
     using namespace gtsam;
 
+    if(!select_keyframe())
+        return;
+    
+
+    keyframe_k++;
+
+    int tracking_no = 0;
+    for(auto what : lm_dict)
+        if (what.tracking)
+            tracking_no++;
+
+    cout<<"TRACKING: "<<tracking_no<<endl;
+    cout<<Symbol('x', keyframe_k)<<endl;
+
+    // pose_cam_inWorld_SE3 = pose_uav_inWorld_SE3;
     if(initializing)
     // at initialization
     {
@@ -103,7 +118,7 @@ void ledvo::LedvoLib::key_frame_manager(
                 Symbol('x', keyframe_k),
                 Pose3(pose_cam_inWorld_SE3.matrix()),
                 lm_dict[i].pt2d,
-                noiseModel::Isotropic::Sigma(2, 0.01),
+                noiseModel::Isotropic::Sigma(2, 0.001),
 
                 Symbol('l', i),
                 lm_dict[i].pt3d
@@ -111,9 +126,14 @@ void ledvo::LedvoLib::key_frame_manager(
             add_prior_factor_wrapper(
                 Symbol('l', i),
                 lm_dict[i].pt3d,
-                noiseModel::Isotropic::Sigma(3, 0.1)
+                noiseModel::Isotropic::Sigma(3, 0.001)
             );
         }
+        // add_prior_factor_wrapper(
+        //         Symbol('l', 0),
+        //         lm_dict[0].pt3d,
+        //         noiseModel::Isotropic::Sigma(3, 0.1)
+        //     );
 
         add_prior_factor_wrapper(
             Symbol('x', keyframe_k),
@@ -121,24 +141,13 @@ void ledvo::LedvoLib::key_frame_manager(
             noiseModel::Diagonal::Sigmas(
                 (
                     Vector(6) << 
-                        Vector3::Constant(0.3),Vector3::Constant(0.1)
+                        Vector3::Constant(0.003),Vector3::Constant(0.001)
                 ).finished()
             )
         );
 
         return;
     }
-
-    if(!select_keyframe())
-        return;
-
-    int tracking_no = 0;
-    for(auto what : lm_dict)
-        if (what.tracking)
-            tracking_no++;
-
-    cout<<"TRACKING: "<<tracking_no<<endl;
-    cout<<Symbol('x', keyframe_k)<<endl;
 
     for(int i = 0; i < lm_dict.size(); i++)
     {
@@ -151,7 +160,7 @@ void ledvo::LedvoLib::key_frame_manager(
             Symbol('x', keyframe_k),
             Pose3(pose_cam_inWorld_SE3.matrix()),
             lm_dict[i].pt2d,
-            noiseModel::Isotropic::Sigma(2, 0.01),
+            noiseModel::Isotropic::Sigma(2, 0.001),
 
             Symbol('l', i),
             lm_dict[i].pt3d
@@ -172,7 +181,6 @@ void ledvo::LedvoLib::key_frame_manager(
     // cout<<"Current factor size: "<<batchsmoother->getFactors().size()<<endl<<endl;
     cout<<"Current factor size: "<<newFactors.size()<<endl<<endl;
 
-    keyframe_k++;
 }
 
 bool ledvo::LedvoLib::select_keyframe()
@@ -229,19 +237,19 @@ bool ledvo::LedvoLib::select_keyframe()
     double overlappingRate = overlappingAreaValue / previous_area;
 
     if (
-        overlappingRate < 0.64 
-        || 
-        ros::Time::now().toSec() - key_frame_last_request > ros::Duration(2.0).toSec()
+        overlappingRate < 0.4 
+        // || 
+        // ros::Time::now().toSec() - key_frame_last_request > ros::Duration(2.0).toSec()
     )
     {
         contour_previous = contour_current;
         ROS_YELLOW_STREAM("NEW KEY FRAME!");
         key_frame_last_request = ros::Time::now().toSec();
 
-        if(overlappingRate < 0.64)
-        {
-            ROS_RED_STREAM("KF becos of OVERLAPPING RATE!");
-        }
+        // if(overlappingRate < 0.4)
+        // {
+        //     ROS_RED_STREAM("KF becos of OVERLAPPING RATE!");
+        // }
 
         return true;
     }
@@ -290,15 +298,25 @@ void ledvo::LedvoLib::add_visual_factor_wrapper(
 )
 {
     using namespace gtsam;
+    
     PinholeCamera<Cal3_S2> camera(node_pose, *K);
     // this will be the points that
 
     // cout<<"from measured: "<<pt_2d_measured<<endl<<endl;
     // cout<<"from reprojec: "<<camera.project(node_lm_point)<<endl<<endl;
 
-    // cout<<"error here: "<<(pt_2d_measured - camera.project(node_lm_point)).norm()<<endl<<endl;
+    cout<<"error here: "<<(pt_2d_measured - camera.project(node_lm_point)).norm()<<endl<<endl;
 
-    // cout<<endl<<endl;
+    cout<<endl<<endl;
+
+    // internal::LevenbergMarquardtState ;
+    // std::unique_ptr<internal::LevenbergMarquardtState>(
+    //     new internal::LevenbergMarquardtState(
+    //         newValues, 
+    //         newFactors.error(newValues),
+    //         params.lambdaInitial, params.lambdaFactor
+    //         ));
+
 
     newFactors.push_back(
         GenericProjectionFactor<Pose3, Point3, Cal3_S2>(

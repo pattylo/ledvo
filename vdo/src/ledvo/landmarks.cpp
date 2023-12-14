@@ -158,6 +158,8 @@ bool ledvo::LedvoLib::process_landmarks(
 )
 {
     std::vector<Eigen::Vector3d> pts_3d_detect = gen_pointcloud(pts_2d_detect, depth);
+    // raw_landmarks_pub(pts_3d_detect_temp);// just for visualization purpose
+
 
     if(firstFrame)
     {
@@ -194,13 +196,10 @@ bool ledvo::LedvoLib::process_landmarks(
         firstFrame = false;
         initializer_counter++;
 
-        raw_landmarks_pub(pts_3d_detect);// just for visualization purpose
         cout<<"end first frame"<<endl;
     }
     else
-    {
-        vector<Eigen::Vector3d> pts_3d_detect_temp;
-        
+    {   
         // require correspondences search
         for(int i = 0; i < lm_dict.size(); i++)
         {
@@ -226,11 +225,9 @@ bool ledvo::LedvoLib::process_landmarks(
             // cout<<delta_max<<endl;
             lm_dict[i].pt2d = pts_2d_temp;
             lm_dict[i].pt3d = (1 - landmark_ir_alpha) * pts_3d_temp + landmark_ir_alpha * lm_dict[i].pt3d;
-            pts_3d_detect_temp.emplace_back(pts_3d_temp);
+        
 
         }
-
-        raw_landmarks_pub(pts_3d_detect_temp);// just for visualization purpose
 
         initializer_counter++;
     }

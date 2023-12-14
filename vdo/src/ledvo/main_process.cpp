@@ -206,17 +206,37 @@ void ledvo::LedvoLib::calculate_msg_callback(const std_msgs::Bool::ConstPtr& msg
 {
     ROS_RED_STREAM("CALCULATE!");
 
+    // ROS_BLUE_STREAM("NEW VALUES");
     // newFactors.print();
+    // ROS_BLUE_STREAM("NEW VALUES");
     // newValues.print();
 
-    gtsam::FixedLagSmoother::Result lala = batchsmoother->update(
-        newFactors,
-        newValues,
-        newTimestamps
-    );
+    cout<<endl<<endl<<endl<<endl;
+    ROS_RED_STREAM("HERERERERE");
+    cout<<"ERROR BEFORE HERE===> "<<newFactors.error(newValues)<<endl;;
+    ROS_RED_STREAM("HERERERERE");
 
-    lala.print();
-    batchsmoother->calculateEstimate().print();
+    using namespace gtsam;
+    Values result = LevenbergMarquardtOptimizer(
+        newFactors, 
+        newValues, 
+        batchLMparameters).optimize();
+
+    double error_lala = 0;
+
+    cout<<"ERROR AFTER HERE===> "<< sqrt(newFactors.error(result) / (keyframe_k + 1 + lm_dict.size())) <<endl;;
+
+    cout<<endl<<endl;
+    result.print();
+
+    // gtsam::FixedLagSmoother::Result lala = batchsmoother->update(
+    //     newFactors,
+    //     newValues,
+    //     newTimestamps
+    // );
+
+    // lala.print();
+    // batchsmoother->calculateEstimate().print();
     // batchsmoother->optimize().print();
     // batchsmoother->
     // batchsmoother->getFactors().print();
@@ -224,7 +244,11 @@ void ledvo::LedvoLib::calculate_msg_callback(const std_msgs::Bool::ConstPtr& msg
 
     // std::cout<<"current batch size: "<<batchsmoother->calculateEstimate()<<std::endl;
 
-    // lala.ge
+    // Single Step Optimization using Levenberg-Marquardt
+    
+    // result.print();
+
+
     ROS_YELLOW_STREAM("IT IS ALL YELLOW!");
 }
 

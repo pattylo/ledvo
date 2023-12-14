@@ -243,6 +243,8 @@ void ledvo::LedvoLib::GTSAM_config()
 
     batchLMparameters.absoluteErrorTol = 1e-9;
     batchLMparameters.relativeErrorTol = 1e-8;
+    batchLMparameters.errorTol = 1e-6;
+
     batchLMparameters.verbosity = gtsam::NonlinearOptimizerParams::ERROR;
     batchLMparameters.verbosityLM = gtsam::LevenbergMarquardtParams::SUMMARY;
     // batchLMparameters.maxIterations = 500;

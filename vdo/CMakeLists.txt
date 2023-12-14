@@ -7,10 +7,10 @@ add_compile_options(-std=c++17)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 
-# # set(LIBTORCH_FOLDER_NAME "libtorch")
-# # set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${LIBTORCH_FOLDER_NAME}" ${CMAKE_PREFIX_PATH})
+# set(LIBTORCH_FOLDER_NAME "libtorch")
+# set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${LIBTORCH_FOLDER_NAME}" ${CMAKE_PREFIX_PATH})
 
-# set(Torch_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libtorch/share/cmake/Torch/")
+set(Torch_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libtorch/share/cmake/Torch/")
 
 find_package(catkin REQUIRED COMPONENTS
   nodelet
@@ -35,8 +35,8 @@ find_package(Sophus REQUIRED)
 
 
 # Torch
-# find_package(Torch REQUIRED)
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
+find_package(Torch REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
 # GTSAM
 find_package(GTSAMCMakeTools) # Include GTSAM CMake tools
@@ -97,7 +97,7 @@ target_link_libraries(ledvo
   ${catkin_LIBRARIES}
   ${OpenCV_INCLUDE_DIRS}
   ${Sophus_INCLUDE_DIRS}
-  # ${TORCH_LIBRARIES}
+  ${TORCH_LIBRARIES}
   gtsam
   # gtsam_unstable
 )

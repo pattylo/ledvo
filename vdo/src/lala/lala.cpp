@@ -321,32 +321,22 @@ int main(int argc, char **argv)
 
     LevenbergMarquardtParams LMparameters;
 
-    LMparameters.absoluteErrorTol = 1e-8;
+    // LMparameters.absoluteErrorTol = 1e-8;
     // LMparameters.relativeErrorTol = 1e-8;
     // LMparameters.maxIterations = 500;
-    LMparameters.verbosity = gtsam::NonlinearOptimizerParams::SILENT;
-    LMparameters.verbosityLM = gtsam::LevenbergMarquardtParams::SILENT;
-    // LMparameters.ver
+    LMparameters.verbosity = gtsam::NonlinearOptimizerParams::ERROR;
+    LMparameters.verbosityLM = gtsam::LevenbergMarquardtParams::SUMMARY;
     
-    double lag = 2.50;
+    double lag = 100000;
     BatchFixedLagSmoother batchsmoother(lag, LMparameters);
-    // batchsmoother.smootherLag()
 
     NonlinearFactorGraph newFactors;
     Values newValues;
     Values landmarkValues;
     FixedLagSmoother::KeyTimestampMap newTimestamps;
 
-    // FactorIndices 
-    // FactorIndex factor_index;
-
-    KeyVector factors_to_be_revmoved;
-
     for(size_t k = 0; k < poses.size(); k++)
     {
-        cout<<"\n\n\n##########################"<<endl;
-        std::cout<<k<<" iteration"<<std::endl<<std::endl<<std::endl;
-
         for(size_t j = 0; j < points.size(); ++j)
         {
             PinholeCamera<Cal3_S2> camera(poses[k], *K);
@@ -390,7 +380,7 @@ int main(int argc, char **argv)
             }
 
             newTimestamps[Symbol('x',k)] = k * 0.5;
-            newTimestamps[Symbol('l',j)] = k * 0.5;
+            // newTimestamps[Symbol('l',j)] = k * 0.5;
             
         }
 
@@ -398,9 +388,7 @@ int main(int argc, char **argv)
 
         if(k == 0)
         {
-            noiseModel::Diagonal::shared_ptr poseNoise = noiseModel::Diagonal::Sigmas((Vector(6) << Vector3::Constant(0.3),Vector3::Constant(0.1)).finished()); 
-            // 30cm std on x,y,z 0.1 rad on roll,pitch,yaw
-            
+            noiseModel::Diagonal::shared_ptr poseNoise = noiseModel::Diagonal::Sigmas((Vector(6) << Vector3::Constant(0.3),Vector3::Constant(0.1)).finished()); // 30cm std on x,y,z 0.1 rad on roll,pitch,yaw
             newFactors.addPrior(Symbol('x', 0), poses[0], poseNoise);
             // newValues.insert(Symbol('x', 0), poses[0].compose(Pose3(Rot3::Rodrigues(-0.1, 0.2, 0.25), Point3(0.05, -0.10, 0.20))));
             newTimestamps[Symbol('x', 0)] = 0.0;
@@ -416,74 +404,30 @@ int main(int argc, char **argv)
         else
         {
             std::cout<<"time: "<<k * 0.5<<std::endl;
-            
-            FactorIndices to_be_removed_temp;
-            // newValues.print();
-            if (k * 0.5 > 4.0)
-            {
-                auto ahah2 = batchsmoother.getFactors().keys().find(Symbol('x',14));
-                
-                // batchsmoother.getFactors().
-                cout<<"ahahahaha: "<<*ahah2<<endl<<endl<<endl;  
-
-                for (auto what : batchsmoother.getFactors())
-                {
-                    // cout<<what-><<endl<<endl;
-
-                } 
-                return 0;
-                // to_be_removed_temp.emplace_back(*ahah2);
-            }
-
-            FixedLagSmoother::Result lala = batchsmoother.update(
-                    newFactors,
-                    newValues,
-                    newTimestamps,
-                    to_be_removed_temp
-                );
-
-
-            // if (k * 0.5 > 2.5)
-            // {
-            //     cout<<"\n\n/////////////////"<<std::endl;
-            //     // cout<<"here!  "<<key<<endl;
-            //     auto ahah1 = batchsmoother.getFactors().keys().find(Symbol('x',0));
-                // auto ahah2 = batchsmoother.getFactors().keys().find();
-    
-            //     cout<<"here!"<<*ahah1<<endl;
-            //     cout<<"here!"<<*ahah2<<endl;
-            //     cout<<"/////////////////\n\n"<<std::endl;
-            // }
-                
-            // batchsmoother.calculateEstimate<Pose3>(Symbol('x',k)).print("Batch Estimate:");
-            // batchsmoother.calculateEstimate<Pose3>(Symbol('x',k)).tr
-            // batchsmoother.calculateEstimate().print();
-            batchsmoother.getFactors().print();
-
-            
-
-            
-            // std::cout<<"current factor size: "<<batchsmoother.getFactors().size()<<std::endl;;
-            // std::cout<<"current batch size: "<<batchsmoother.calculateEstimate().size()<<std::endl;
-            // std::cout<<lala.getError()<<std::endl;
-            // lala.
-
-            newFactors.resize(0);
-            newValues.clear();
-            newTimestamps.clear();
-            cout<<batchsmoother.getFactors().size()<<endl;
-
+        
         }
 
         
 
-        
+        std::cout<<"1 iteration"<<std::endl<<std::endl<<std::endl;
 
     }
 
+    cout<<"ERROR HERE===> "<<newFactors.error(newValues)<<endl;;
+
+    FixedLagSmoother::Result lala = batchsmoother.update(
+                newFactors,
+                newValues,
+                newTimestamps
+            );
+
+    lala.print();
+
     // batchsmoother.calculateEstimate().print();
 
-    batchsmoother.getFactors();
+
+
+
 
     return 0;
 }
