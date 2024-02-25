@@ -274,7 +274,6 @@ void ledvo::LedvoLib::calculate_msg_callback(const std_msgs::Bool::ConstPtr& msg
     ROS_YELLOW_STREAM("IT IS ALL YELLOW!");
 }
 
-
 void ledvo::LedvoLib::set_image_to_publish(double freq, const sensor_msgs::CompressedImageConstPtr & rgbmsg)
 {    
     char hz[40];

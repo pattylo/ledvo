@@ -70,6 +70,9 @@ void ledvo::LedvoLib::registerRosCommunicate(ros::NodeHandle& nh)
 
     dummy_msg_sub = nh.subscribe<std_msgs::Bool>
         ("/dummy", 1, &LedvoLib::dummy_callback, this);
+
+    fisheye_msg_sub = nh.subscribe<sensor_msgs::Image>
+        ("/camera/fisheye1/image_raw", 1, &LedvoLib::fisheye_callback, this);
     
     //publish
     image_transport::ImageTransport image_transport_(nh);

@@ -90,6 +90,7 @@ add_library(ledvo
   src/ledvo/landmarks.cpp
   src/ledvo/dynamics.cpp
   src/ledvo/fgo.cpp
+  src/ledvo/fisheye.cpp
 )
 
 # Specify libraries to link a library or executable target against

@@ -126,6 +126,8 @@ namespace ledvo
         void log(double ms);    
         void terminal_msg_display(double hz);
 
+// fisheye.cpp //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        void fisheye_callback(const sensor_msgs::Image::ConstPtr& image);
 // config.cpp //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         
         void doALOTofConfigs(ros::NodeHandle& nh);
@@ -251,6 +253,7 @@ namespace ledvo
         //frames
         cv::Mat frame, display, hsv, frame_temp;
         cv::Mat frame_input;
+        cv::Mat fisheye_frame;
         cv::Mat im_with_keypoints;
         cv::Mat frame_initial_thresholded;
         
@@ -309,6 +312,7 @@ namespace ledvo
         ros::Subscriber uav_ctrlmsg_sub;
         ros::Subscriber cal_msg_sub;
         ros::Subscriber dummy_msg_sub;
+        ros::Subscriber fisheye_msg_sub;
 
     //publisher 
         ros::Publisher ledpose_pub, ledodom_pub, 
