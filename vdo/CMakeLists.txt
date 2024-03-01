@@ -133,3 +133,23 @@ add_executable(datalog
 target_link_libraries(datalog
   ${catkin_LIBRARIES}
 )
+
+############################################################################
+
+add_executable(collect
+  src/calibrate/collect.cpp
+)
+
+target_link_libraries(collect
+  ${catkin_LIBRARIES}
+)
+
+############################################################################
+
+add_executable(calibrate
+  src/calibrate/calibrate.cpp
+)
+
+target_link_libraries(calibrate
+  ${catkin_LIBRARIES}
+)

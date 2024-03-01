@@ -1,5 +1,5 @@
 /*
-    This file is part of  LEDVO - the relative state estimation package for UAV-UGV
+    This file is part of LEDVO - the relative state estimation package for UAV-UGV
 
     LEDVO is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -16,17 +16,17 @@
 */
 
 /**
- * \file fisheye.cpp
- * \date 25/02/2024
+ * \file collect.cpp
+ * \date 01/03/2024
  * \author pattylo
- * \copyright (c) AIRO-LAB, RCUAS of Hong Kong Polytechnic University
+ * \copyright (c) RCUAS of Hong Kong Polytechnic University
  * \brief classes for fisheye-based relative localization for UAV and UGV based on LED markers
  */
 
-#include "include/ledvo_lib.h"
+#include "essential.h"
 #include <opencv2/calib3d.hpp>
 
-void ledvo::LedvoLib::fisheye_callback(const sensor_msgs::Image::ConstPtr& image)
+void fisheye_callback(const sensor_msgs::Image::ConstPtr& image)
 {
     // main process here:
     cv_bridge::CvImageConstPtr fisheye_ptr;
@@ -39,7 +39,7 @@ void ledvo::LedvoLib::fisheye_callback(const sensor_msgs::Image::ConstPtr& image
         ROS_ERROR("cv_bridge exception: %s", e.what());
     }
 
-    fisheye_frame = fisheye_ptr->image;
+    cv::Mat fisheye_frame = fisheye_ptr->image;
 
     cv::imshow("fisheye", fisheye_frame);
     cv::waitKey(10);
@@ -87,3 +87,8 @@ void ledvo::LedvoLib::fisheye_callback(const sensor_msgs::Image::ConstPtr& image
     cv::waitKey(10);
 }
 
+
+int main(int argc, char** argv)
+{
+    return 0;
+}

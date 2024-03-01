@@ -24,7 +24,6 @@
  */
 
 #include "sfmdata.h"
-
 #include "essential.h"
 
 // Camera observations of landmarks (i.e. pixel coordinates) will be stored as Point2 (x, y).
