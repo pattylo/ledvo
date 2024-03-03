@@ -128,6 +128,17 @@ namespace ledvo
 
 // fisheye.cpp //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         void fisheye_callback(const sensor_msgs::Image::ConstPtr& image);
+        bool aruco_detect(
+            cv::Mat& frame, 
+            std::vector<Eigen::Vector2d>& pts_2d
+        );
+        void pose_w_aruco_pnp(cv::Mat& frame);
+        void get_initial_pose(
+            std::vector<Eigen::Vector2d> pts_2d, 
+            std::vector<Eigen::Vector3d> body_frame_pts, 
+            Eigen::Matrix3d& R, 
+            Eigen::Vector3d& t
+        )
 // config.cpp //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         
         void doALOTofConfigs(ros::NodeHandle& nh);
