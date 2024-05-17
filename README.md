@@ -4,7 +4,7 @@
 
 ## Learning Dynamic Factors for Optimization-based Visual Odometry
 
-This is a project for COMP5212 Machine Learning.
+This is a project for COMP5212 Machine Learning. For training, please refer to [this](https://github.com/pattylo/ledvo_train).
 
 <!-- ### Abstract
 <div align="justify">
